@@ -3,8 +3,6 @@ package eventman
 
 import (
 	"fmt"
-	"log"
-	"os"
 	"time"
 
 	"github.com/polihoster/tdbot/events/event"
@@ -35,9 +33,10 @@ func (m *Manager) AddToWatch(evName ...string) {
 func (m *Manager) Write(ev *event.Event) error {
 	for _, name := range m.WatchList {
 		if name == ev.Name || name == "*" {
+			//log.Printf("EV:\n%#v\n\n", ev.Name)
 			if err := m.Store.Write(ev); err != nil {
-				log.Fatalf("Write Event : %s\n", err)
-				os.Exit(1)
+				return fmt.Errorf("Write Event Error: %s\n", err)
+
 			} else {
 				return nil
 			}

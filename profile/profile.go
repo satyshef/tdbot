@@ -46,6 +46,7 @@ var defaultDir = ""
 //var DefaultConfigFile = "bot.toml"
 var ProFile = "bot.toml"
 
+//перенести в конфигурацию
 var (
 	watchEventList = []string{"*"}
 

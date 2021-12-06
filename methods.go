@@ -9,31 +9,96 @@ import (
 	"strings"
 	"time"
 
+	"github.com/polihoster/tdbot/chat"
 	"github.com/polihoster/tdlib"
 )
 
-/*
-func (bot *Bot) SearchChats(chatName string) (*tdlib.Chats, *tdlib.Error) {
+// Глобальный поиск чатов
+// @query - ключевая фраза поиска
+func (bot *Bot) SearchChats(query string) ([]*chat.Chat, *tdlib.Error) {
 
-	//chats, err := bot.Client.SearchChats(chatName, 1000)
-	chats, err := bot.Client.SearchPublicChats(chatName)
+	//query = "werwerwerqwrw" //публичная группа
+	//query = "ertertertertet" //chanel
+	//query = "ererlgjrlgjelrgjerlgjer" //user
+
+	//-----------------------------------------
+	chats, err := bot.Client.SearchPublicChats(query)
 
 	if err != nil {
 		return nil, err.(*tdlib.Error)
 	}
 
+	result := make([]*chat.Chat, 0)
+
 	for _, cid := range chats.ChatIDs {
 
-		chat, _ := bot.Client.GetChat(cid)
-		c := chat.Type.(*tdlib.ChatTypeSupergroup)
-		cc, _ := bot.Client.GetSupergroup(c.SupergroupID)
-		bot.Logger.Infof("%#v\n\n", cc)
+		//Загружаем полную информацию о чате
+		full, err := bot.GetChatFullInfo(cid)
+		if err != nil {
+			continue
+		}
+
+		if full != nil {
+			bot.Logger.Infof("FULL CHAT :\n%#v\n\n", full)
+			result = append(result, full)
+		}
 	}
 
-	return chats, nil
+	return result, nil
 }
 
-*/
+// Получить полную информацию о чате
+// @cid - чат id
+func (bot *Bot) GetChatFullInfo(cid int64) (*chat.Chat, *tdlib.Error) {
+
+	chatInfo, err := bot.Client.GetChat(cid)
+
+	if err != nil {
+		return nil, err.(*tdlib.Error)
+	}
+
+	switch chatInfo.Type.GetChatTypeEnum() {
+	case tdlib.ChatTypeSupergroupType:
+		//supergroup
+		var chatType chat.Type
+		superGroup, _ := bot.Client.GetSupergroup(chatInfo.Type.(*tdlib.ChatTypeSupergroup).SupergroupID)
+		if superGroup.IsChannel {
+			chatType = chat.TypeChannel
+		} else {
+			chatType = chat.TypeGroup
+		}
+
+		//bot.Logger.Infof("FULL CHAT :\n%#v\n\n", f)
+		//bot.Logger.Infof("Sender :\n%#v\n\n", chatInfo.LastMessage.Date)
+
+		chat := chat.New(chatInfo.ID, chatInfo.Title, superGroup.Username, chatType)
+		chat.DateCreation = superGroup.Date
+		chat.HasLinkedChat = superGroup.HasLinkedChat
+		chat.IsScam = superGroup.IsScam
+		chat.IsVerified = superGroup.IsVerified
+		chat.MemberCount = superGroup.MemberCount
+
+		//Не корректно отображает дату последнего сообщения
+		if chatInfo.LastMessage != nil {
+			chat.DateLastMessage = chatInfo.LastMessage.Date
+		}
+
+		// get caht description
+		f, err := bot.Client.GetSupergroupFullInfo(superGroup.ID)
+		if err == nil {
+			chat.BIO = f.Description
+		}
+
+		return chat, nil
+
+	case tdlib.ChatTypePrivateType:
+		//user action...
+	default:
+		bot.Logger.Infof("DEFAULT:\n\n%#v\n\n", chatInfo)
+	}
+
+	return nil, nil
+}
 
 func (bot *Bot) InviteUser(uid int32, cid string) *tdlib.Error {
 
@@ -597,7 +662,7 @@ func (bot *Bot) GetChat(chatID string, join bool) (*tdlib.Chat, *tdlib.Error) {
 
 }
 
-//GetChatList загрузить список чатов
+//GetChatList загрузить список чатов аккаунта
 func (bot *Bot) GetChatList(limit int) ([]*tdlib.Chat, error) {
 	var allChats []*tdlib.Chat
 	var haveFullChatList bool

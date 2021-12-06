@@ -1,6 +1,8 @@
 package tdbot
 
 import (
+	"strings"
+
 	"github.com/polihoster/tdbot/config"
 	"github.com/polihoster/tdbot/events/event"
 	"github.com/polihoster/tdbot/profile"
@@ -49,14 +51,16 @@ func (bot *Bot) requestHandler(request tdlib.UpdateMsg) *tdlib.Error {
 	//bot.Logger.Errorf("New Request %#v\n\n", request.Data)
 
 	requestName := request.Data["@type"].(string)
-	// Проверяем лимиты ошибки
-	//fmt.Println(profile.EventTypeResponse)
-	//if err := checkAllLimits(bot); err != nil {
 	if err := checkEventLimits(bot, profile.EventTypeRequest, requestName); err != nil {
 		return err
 	}
+
 	ev := event.New(profile.EventTypeRequest, requestName, 0, string(request.Raw))
-	bot.Profile.Event.Write(ev)
+	if err := bot.Profile.Event.Write(ev); err != nil && !strings.Contains(err.Error(), "Event not observed") {
+		bot.Logger.Errorln(err)
+		bot.Stop()
+		return tdlib.NewError(profile.ErrorCodeLimitExceeded, "PROFILE_EVENT_DONT_WRITE", err.Error())
+	}
 
 	return nil
 }
@@ -67,12 +71,14 @@ func (bot *Bot) responseHandler(response tdlib.UpdateMsg) *tdlib.Error {
 
 	respName := response.Data["@type"].(string)
 	ev := event.New(profile.EventTypeResponse, respName, 0, string(response.Raw))
-	bot.Profile.Event.Write(ev)
+	if err := bot.Profile.Event.Write(ev); err != nil && strings.Contains(err.Error(), "Event not observed") {
+		bot.Logger.Errorln(err)
+		bot.Stop()
+		return tdlib.NewError(profile.ErrorCodeLimitExceeded, "PROFILE_EVENT_DONT_WRITE", err.Error())
+	}
 
 	// Проверяем лимиты ответа
-	//if err := checkAllLimits(bot); err != nil {
 	if err := checkEventLimits(bot, profile.EventTypeResponse, respName); err != nil {
-		//bot.Logger.Error(err)
 		return err
 	}
 	return nil
@@ -83,42 +89,16 @@ func (bot *Bot) errorHandler(e tdlib.Error) *tdlib.Error {
 	//bot.Logger.Errorf("Error Catch %#v\n\n", e)
 
 	ev := event.New(profile.EventTypeError, e.Type, 0, e.Message)
-	bot.Profile.Event.Write(ev)
+	if err := bot.Profile.Event.Write(ev); err != nil && strings.Contains(err.Error(), "Event not observed") {
+		bot.Logger.Errorln(err)
+		bot.Stop()
+		return tdlib.NewError(profile.ErrorCodeLimitExceeded, "PROFILE_EVENT_DONT_WRITE", err.Error())
+	}
+
 	// Проверяем лимиты ошибки
-	//fmt.Println(profile.EventTypeError)
-	//if err := checkAllLimits(bot); err != nil {
 	if err := checkEventLimits(bot, profile.EventTypeError, e.Type); err != nil {
 		return err
 	}
-	/*
-		// Timeout
-		switch e.Code {
-		case 501:
-			bot.Status = StatusTimeout
-		case 400:
-			switch e.Message {
-			case "PHONE_NUMBER_BANNED":
-				bot.Logger.Infoln("Profile Banned", e.Code)
-				bot.Profile.User.Status = user.StatusBanned
-			default:
-				bot.Logger.Infof("CATCH ERROR 400 : %#v\n", e.Message)
-			}
-
-		case 401:
-			bot.Logger.Infof("CATCH ERROR 401(logout???) : %#v\n", e.Message)
-			bot.Profile.User.Status = user.StatusLogout
-		}
-
-	*/
-	/*
-		// Number Banned
-		switch e.Message {
-		case "PHONE_NUMBER_BANNED":
-			bot.Logger.Infoln("Set Status Number Banned", e.Code)
-			bot.Profile.User.Status = user.StatusBanned
-			return nil
-		}
-	*/
 
 	return nil
 }
@@ -133,36 +113,10 @@ func checkEventLimits(bot *Bot, eventType, eventName string) *tdlib.Error {
 		if limit.Interval > 5 && bot.Profile.Config.APP.Mode == 2 {
 			bot.Stop()
 		}
-		//bot.Profile.User.Status = user.StatusRestricted
+
 		l := &config.Limits{eventType: {eventName: exLimits}}
 		return tdlib.NewError(profile.ErrorCodeLimitExceeded, "BOT_LIMIT_EXCEEDED", l.JSON())
 	}
 
-	//bot.Profile.User.Status = user.StatusReady
 	return nil
 }
-
-/*
-// Проверяем лимиты события. Немного БРЕД!
-func checkAllLimits(bot *Bot) *tdlib.Error {
-	//если у профиля ограничения по лимитам тогда игнорируем его
-	if bot.Profile.Config.APP.Mode == 2 {
-		exLimits := bot.Profile.CheckAllLimits()
-		for eventType, limits := range exLimits {
-			for eventName, limit := range limits {
-				for _, l := range limit {
-					//если до оканачания ограничений много времени тогда останавливаем бота
-					if l.Interval > 5 {
-						bot.Stop()
-						l := &config.Limits{eventType: {eventName: limit}}
-						return tdlib.NewError(profile.ErrorLimitExceeded, "Limit exceeded", l.JSON())
-					}
-					//bot.Profile.User.Status = user.StatusRestricted
-				}
-			}
-		}
-	}
-
-	return nil
-}
-*/

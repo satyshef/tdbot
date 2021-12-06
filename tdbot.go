@@ -130,7 +130,12 @@ func (bot *Bot) Start() *tdlib.Error {
 	bot.Logger.Infoln("Init proxy ...")
 	err := bot.InitProxy(true)
 	if err != nil {
-		bot.Stop()
+		if err.Message != "BOT_UNKNOWN_PROXY_TYPE" {
+			bot.Stop()
+		} else {
+			bot.Logger.Errorf("%#v", err)
+		}
+
 		return err
 	}
 	/*
@@ -305,6 +310,11 @@ func (bot *Bot) InitProxy(check bool) *tdlib.Error {
 
 	if bot.Profile == (&profile.Profile{}) || bot.Profile.Config == nil {
 		return tdlib.NewError(profile.ErrorCodeNotInit, "PROFILE_NOT_INIT", "Profile not init")
+	}
+
+	if bot.Profile.Config.Proxy == nil {
+		bot.Logger.Infoln("Proxy not set")
+		return nil
 	}
 
 	if bot.Profile.Config.Proxy != nil && !bot.Profile.Config.Proxy.Enable {
