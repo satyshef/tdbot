@@ -28,6 +28,8 @@ func (bot *Bot) SearchChats(query string) ([]*chat.Chat, *tdlib.Error) {
 		return nil, err.(*tdlib.Error)
 	}
 
+	bot.Logger.Debugf("Find : %s - %d", query, chats.TotalCount)
+
 	result := make([]*chat.Chat, 0)
 
 	for _, cid := range chats.ChatIDs {
@@ -39,7 +41,7 @@ func (bot *Bot) SearchChats(query string) ([]*chat.Chat, *tdlib.Error) {
 		}
 
 		if full != nil {
-			bot.Logger.Infof("FULL CHAT :\n%#v\n\n", full)
+			//bot.Logger.Debugf("FULL CHAT :\n%#v\n\n", full)
 			result = append(result, full)
 		}
 	}
@@ -94,7 +96,7 @@ func (bot *Bot) GetChatFullInfo(cid int64) (*chat.Chat, *tdlib.Error) {
 	case tdlib.ChatTypePrivateType:
 		//user action...
 	default:
-		bot.Logger.Infof("DEFAULT:\n\n%#v\n\n", chatInfo)
+		bot.Logger.Infof("UNKNOWN CHAT TYPE:\n\n%#v\n\n", chatInfo)
 	}
 
 	return nil, nil

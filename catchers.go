@@ -110,7 +110,7 @@ func checkEventLimits(bot *Bot, eventType, eventName string) *tdlib.Error {
 
 	for _, limit := range exLimits {
 		//если до оканачания ограничений много времени тогда останавливаем бота
-		if limit.Interval > 5 && bot.Profile.Config.APP.Mode == 2 {
+		if limit.Interval > bot.Profile.Config.APP.DontRebootInterval && bot.Profile.Config.APP.Mode == 2 {
 			bot.Stop()
 		}
 

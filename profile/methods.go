@@ -11,8 +11,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/juju/fslock"
+	"github.com/polihoster/tdbot/fslock"
 	"github.com/polihoster/tdbot/user"
+)
+
+var (
+	lockFile string = "lock"
+	locker   *fslock.Lock
 )
 
 //создать директорию профиля
@@ -25,35 +30,34 @@ func MakeProfileDir(path string) {
 			os.Exit(1)
 		}
 	}
-
 }
 
-// LockProfileDir ....
-func LockProfileDir(path string) error {
+/*
+// LockProfile .... Не закрывается дескриптор при повторной инициализации!!!
+func LockProfile(path string) error {
 	AddTail(&path)
-	lock := fslock.New(path + "lock")
-	err := lock.TryLock()
+	locker = fslock.New(path + lockFile)
+	err := locker.TryLock()
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-// UnlockProfileDir ...
-func UnlockProfileDir(path string) error {
-	AddTail(&path)
-	return os.Remove(path + "lock")
-	/*
-		lock := fslock.New(path + "lock")
-		err := lock.Unlock()
-		if err != nil {
-			return err
-		}
-	*/
-
-	//return nil
+// UnlockProfile ...
+func UnlockProfile(path string) error {
+	if locker == nil {
+		return nil
+	}
+	err := locker.Unlock()
+	if err != nil {
+		return err
+	}
+	//locker = nil
+	return nil
 }
 
+*/
 // Получить профиль
 func Get(dir string, usrType user.Type) (*Profile, error) {
 

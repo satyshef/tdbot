@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"path"
+	"runtime"
 	"strings"
 
 	"time"
@@ -65,21 +66,31 @@ var (
 */
 )
 
+func init() {
+	if runtime.GOOS != "linux" {
+		log.Fatalf("Profile : OS %s not supported", runtime.GOOS)
+	}
+}
+
 // =================================== OLD METHODS =========================
 
-func newProfile(dir, name, phone string, usrType user.Type) *Profile {
-
+func newProfile(dir, name, phone string, usrType user.Type) (*Profile, error) {
+	eventManager, err := newEventManager(dir, watchEventList)
+	if err != nil {
+		return nil, err
+	}
 	cfg := config.New()
-	return &Profile{
+	prof := &Profile{
 		User:       user.New(name, phone, usrType),
 		Dir:        dir,
 		ConfigFile: ProFile,
 		Config:     cfg,
-		Event:      newEventManager(dir, watchEventList),
+		Event:      eventManager,
 	}
+	return prof, nil
 }
 
-func newEventManager(dir string, eventList []string) *eventman.Manager {
+func newEventManager(dir string, eventList []string) (*eventman.Manager, error) {
 	return eventman.New(dir+"event", eventList)
 }
 
@@ -123,18 +134,22 @@ func New(dir, name, phone string, configFile string, usrType user.Type) (prof *P
 
 	AddTail(&dir)
 	MakeProfileDir(dir)
-	//блокируем профиль для избежания повторного использования
-	err = LockProfileDir(dir)
-	if err != nil {
-		return nil, fmt.Errorf("Profile is already in use")
-	}
-
+	/*
+		//Тест. Пробуем блокировку Level DB
+		//блокируем профиль для избежания повторного использования
+		err = LockProfile(dir)
+		if err != nil {
+			return nil, err
+		}
+	*/
 	fmt.Printf("Loading profile %s\n", phone)
 
-	prof = newProfile(dir, name, phone, usrType)
+	prof, err = newProfile(dir, name, phone, usrType)
+	if err != nil {
+		return nil, err
+	}
 	err = prof.LoadConfig(configFile)
 	if err != nil {
-		//fmt.Printf("%s\n", err)
 		return nil, err
 	}
 
@@ -222,53 +237,41 @@ func (p *Profile) SaveConfig(configFile string) error {
 // CheckAllLimits проверить все лимиты
 func (p *Profile) CheckAllLimits() config.Limits {
 	result := make(map[string]map[string][]config.Limit)
-
 	for evType, eventList := range p.Config.Limits {
 		for evName := range eventList {
 			if exLimits := p.CheckLimit(evType, evName); exLimits != nil {
 				result[evType] = make(map[string][]config.Limit)
 				result[evType][evName] = exLimits
 			}
-
 		}
-
 	}
-
 	if len(result) > 0 {
 		return result
 	}
-
 	return nil
-
 }
 
 //Переместить профиль
 func (p *Profile) Move(dst string) error {
-
-	err := UnlockProfileDir(p.Dir)
-	if err != nil {
-		return err
-	}
+	/*
+		//Тест. Пробуем блокировку Level DB
+		err := UnlockProfile(p.Dir)
+		if err != nil {
+			return err
+		}
+	*/
 	AddTail(&dst)
 	MakeProfileDir(dst)
 	dst += path.Base(p.Dir)
 	fmt.Printf("Move %s to %s\n", p.Dir, dst)
-	err = os.Rename(p.Dir, dst)
+	err := os.Rename(p.Dir, dst)
 	p = Load(dst, p.ConfigFile, p.User.Type)
 	return err
 }
 
 // Remove Удалить профиль
 func (p *Profile) Remove() error {
-	/*
-		err := UnlockProfileDir(p.Dir)
-		if err != nil {
-			return err
-		}
-	*/
-
 	fmt.Printf("Remove profile %s\n", p.Dir)
-	//err = os.RemoveAll(p.Dir)
 	return os.RemoveAll(p.Dir)
 }
 
@@ -276,7 +279,9 @@ func (p *Profile) Close() error {
 	if p.Event != nil {
 		p.Event.Store.Close()
 	}
-	UnlockProfileDir(p.Dir)
+
+	//Тест. Пробуем блокировку Level DB
+	//UnlockProfile(p.Dir)
 	p.User = nil
 	p.Event = nil
 	p.Config = nil

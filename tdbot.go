@@ -62,9 +62,9 @@ func initClient(prof *profile.Profile) *tdlib.Client {
 			DeviceModel:            prof.Config.APP.DeviceModel,
 			SystemVersion:          prof.Config.APP.SystemVersion,
 			ApplicationVersion:     prof.Config.APP.AppVersion,
-			UseMessageDatabase:     true,
-			UseFileDatabase:        true,
-			UseChatInfoDatabase:    true,
+			UseMessageDatabase:     false, //
+			UseFileDatabase:        false, //
+			UseChatInfoDatabase:    false, //
 			UseTestDataCenter:      false,
 			DatabaseDirectory:      prof.Dir + "database",
 			FileDirectory:          prof.Dir + "files",

@@ -15,13 +15,17 @@ type Manager struct {
 	WatchList []string
 }
 
-// New ...
-func New(path string, watchList []string) *Manager {
-	return &Manager{
-		Store:     leveldb.New(path),
-		WatchList: watchList,
+// Create new storage manager
+func New(path string, watchList []string) (*Manager, error) {
+	store, err := leveldb.New(path)
+	if err != nil {
+		return nil, err
 	}
-
+	return &Manager{
+			Store:     store,
+			WatchList: watchList,
+		},
+		nil
 }
 
 // AddToWatch ...

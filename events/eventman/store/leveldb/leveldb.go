@@ -19,27 +19,28 @@ type Store struct {
 	path string
 }
 
-// New ...
-func New(path string) *Store {
-
-	return &Store{
-		db:   initDB(path),
-		path: path,
+// Create new store
+func New(path string) (*Store, error) {
+	db, err := initDB(path)
+	if err != nil {
+		return nil, err
 	}
+	return &Store{
+			db:   db,
+			path: path,
+		},
+		nil
 }
 
-func initDB(path string) (db *leveldb.DB) {
-	var err error
-	//o := &Opts{}
+func initDB(path string) (db *leveldb.DB, err error) {
 	db, err = leveldb.OpenFile(path, nil)
 	if err != nil {
 		db, err = leveldb.RecoverFile(path, nil)
 		if err != nil {
-			log.Fatal("Level DB init error :", err)
+			return nil, fmt.Errorf("Level DB : %s", err)
 		}
 	}
-
-	return db
+	return db, nil
 }
 
 // Write event to base
@@ -55,23 +56,18 @@ func (s *Store) Write(ev *event.Event) error {
 // @minTime - с какого времени искать
 // @maxTime - по какое время
 func (s *Store) SearchByTime(evType, evName string, minTime, maxTime int64) (evns []*event.Event, err error) {
-
 	if evType == "" || evName == "" {
 		return nil, fmt.Errorf("%s", "Event type or name not specified")
 	}
-
 	if maxTime == 0 {
 		maxTime = time.Now().Unix()
 	}
-
 	if minTime >= maxTime {
 		return nil, fmt.Errorf("Не верно указан интервал времени (min - %d ; max - %d)", minTime, maxTime)
 	}
-
 	//Обрезаем наносекунды
 	startTime := int32(minTime)
 	endTime := int32(maxTime)
-
 	from := []byte(fmt.Sprintf("%s-%s-%d", evType, evName, startTime))
 	to := []byte(fmt.Sprintf("%s-%s-%d", evType, evName, endTime))
 	iter := s.db.NewIterator(&util.Range{Start: from, Limit: to}, nil)
@@ -79,16 +75,12 @@ func (s *Store) SearchByTime(evType, evName string, minTime, maxTime int64) (evn
 		if ev := parseRecord(iter.Key(), iter.Value()); ev != nil {
 			evns = append(evns, ev)
 		}
-
 	}
-
 	iter.Release()
-
 	if err = iter.Error(); err != nil {
 		log.Fatalf("SearchByTime error : %s\n", err)
 		os.Exit(1)
 	}
-
 	return evns, err
 }
 

@@ -34,6 +34,7 @@ type (
 		Photo              string `toml:"photo"`
 		ShowPhoneMode      int    `toml:"show_phone_mode"` // 0 - без изменений, 1 - показывать, 2 - скрывать
 		Mode               int    `toml:"mode"`            // 1 - single mode (не проверять лимиты при старте) 2 - group mode(проверять)
+		DontRebootInterval int32  `toml:"max_interval"`    // интервал при котором не происходит отключение профиля если сработал лимит
 		//CheckLimit         bool   `toml:"check_limit"`
 		SetOnline bool   `toml:"set_online"`
 		BannedDir string `toml:"banned_dir"`
@@ -96,6 +97,7 @@ func New() *Config {
 			LogoutDir:          "logout",
 			FoulDir:            "foul",
 			Mode:               1,
+			DontRebootInterval: 10,
 		},
 
 		Log: &Log{
