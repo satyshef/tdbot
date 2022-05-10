@@ -3,175 +3,225 @@ package profile
 
 import (
 	"fmt"
-	"io/ioutil"
 	"log"
-	"math/rand"
 	"os"
-	"strconv"
+	"path"
 	"strings"
 	"time"
 
-	"github.com/polihoster/tdbot/fslock"
-	"github.com/polihoster/tdbot/user"
+	"github.com/polihoster/tdbot/config"
 )
 
-var (
-	lockFile string = "lock"
-	locker   *fslock.Lock
-)
+//Переместить профиль
+// @dst - директория назначения
+func (p *Profile) Move(dst string) error {
+	AddTail(&dst)
+	makeProfileDir(dst)
+	dst += path.Base(p.Location())
+	fmt.Printf("Move %s to %s\n", p.Location(), dst)
+	err := p.unlock()
+	if err != nil {
+		return err
+	}
+	//dst = "/home/boba/go/src/radic/tebot/cmd/app/profiles/logout/dssss"
+	err = os.Rename(p.Location(), dst)
+	if err != nil {
+		return err
+	}
+	p.SetLocation(dst)
+	return p.Reload()
+}
 
-//создать директорию профиля
-func MakeProfileDir(path string) {
-	//проверяем наличие директории профайла, если ее нет то пытаемся создать
-	if _, err := os.Stat(path); os.IsNotExist(err) {
-		err := os.MkdirAll(path, 0755)
-		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
+// Remove Удалить профиль
+func (p *Profile) Remove() error {
+	fmt.Printf("Remove profile %s\n", p.Location())
+	return os.RemoveAll(p.Location())
+}
+
+func (p *Profile) Close() error {
+	//Тест. Пробуем блокировку Level DB
+	//UnlockProfile(p.Location())
+	p.unlock()
+
+	/*
+			Тест
+		p.User = nil
+		p.Event = nil
+		p.Config = nil
+	*/
+	return nil
+}
+
+// Перезагрузить профиль
+// @path - если указан, тогда профиль загружается по данному пути
+func (p *Profile) Reload() error {
+	newProf, err := Get(p.Location(), 0)
+	if err != nil {
+		return err
+	}
+	p.dir = newProf.dir
+	p.Config = newProf.Config
+	p.Event = newProf.Event
+	p.User = newProf.User
+	return nil
+}
+
+// Директория профиля
+func (p *Profile) Location() string {
+	return p.dir
+}
+
+// Установить директорию профиля
+// @path - путь к директории профиля
+func (p *Profile) SetLocation(path string) {
+	AddTail(&path)
+	p.dir = path
+}
+
+// Путь к файлу конфигурации профиля
+func (p *Profile) ConfigFile() string {
+	return p.Location() + ProFile
+}
+
+//LoadConfig загрузить конфигурацию из файла
+func (p *Profile) LoadConfig() error {
+	if p.ConfigFile() == "" {
+		return fmt.Errorf("%s", "Config file not set")
+	}
+	err := p.Config.Load(p.ConfigFile())
+	if err != nil {
+		return fmt.Errorf("Error loading config file %s : %s", p.ConfigFile(), err)
+	}
+	fmt.Printf("Profile config : %s\n", p.ConfigFile())
+	return nil
+}
+
+func (p *Profile) SaveConfig() error {
+	if p.ConfigFile() == "" {
+		return fmt.Errorf("%s", "Config file not set")
+	}
+	if err := p.Config.Save(p.ConfigFile()); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (p *Profile) lock() error {
+	return nil
+}
+
+func (p *Profile) unlock() error {
+	if p.Event != nil {
+		return p.Event.Close()
+	}
+	return nil
+}
+
+// CheckAllLimits проверить все лимиты
+func (p *Profile) CheckAllLimits() config.Limits {
+	result := make(map[string]map[string][]config.Limit)
+	for evType, eventList := range p.Config.Limits {
+		for evName := range eventList {
+			if exLimits := p.CheckLimit(evType, evName); exLimits != nil {
+				result[evType] = make(map[string][]config.Limit)
+				result[evType][evName] = exLimits
+			}
 		}
 	}
-}
-
-/*
-// LockProfile .... Не закрывается дескриптор при повторной инициализации!!!
-func LockProfile(path string) error {
-	AddTail(&path)
-	locker = fslock.New(path + lockFile)
-	err := locker.TryLock()
-	if err != nil {
-		return err
+	if len(result) > 0 {
+		return result
 	}
 	return nil
 }
 
-// UnlockProfile ...
-func UnlockProfile(path string) error {
-	if locker == nil {
+// CheckLimit проверить достижение литов события
+// @evType - тип события
+// @evName - имя события лимит которого нужно проверить
+func (p *Profile) CheckLimit(evType, evName string) (result []config.Limit) {
+	//Если для события не установлен лимит тогда проверку считаем удачной
+	if p.Config == nil || p.Config.Limits == nil || p.Config.Limits[evType] == nil || p.Config.Limits[evType][evName] == nil {
 		return nil
 	}
-	err := locker.Unlock()
-	if err != nil {
-		return err
+	for _, limit := range p.Config.Limits[evType][evName] {
+		minTime := time.Now().Unix() - int64(limit.Interval)
+		maxTime := time.Now().Unix() + 1
+		evns, err := p.Event.SearchByTime(evType, evName, minTime, maxTime)
+		if err != nil {
+			log.Fatalf("Search Event Error : %s\n", err)
+			os.Exit(1)
+		}
+		//Проверяем лимит, если превышен то добавляем его в список результатов
+		if len(evns) >= int(limit.Limit) {
+			// в ответ записываем время до окончания интервала лимита
+			limit.Interval -= int32((time.Now().UnixNano() - evns[len(evns)-1].Time) / int64(time.Second))
+			result = append(result, limit)
+		}
 	}
-	//locker = nil
-	return nil
+	return result
 }
 
-*/
-// Получить профиль
-func Get(dir string, usrType user.Type) (*Profile, error) {
-
-	AddTail(&dir)
-
-	if _, err := os.Stat(dir); os.IsNotExist(err) {
-		return nil, fmt.Errorf("%s does not exist", dir)
+// CheckDir проверяем наличие директории профиля
+func (p *Profile) CheckDir() bool {
+	if _, err := os.Stat(p.Location()); err == nil {
+		return true
 	}
+	return false
+}
 
-	phoneNumber := getPhoneNumber(dir)
-	prof, err := New(dir, phoneNumber, phoneNumber, dir+ProFile, usrType)
-	if err != nil {
-		return nil, err
+// BaseDir базавая директория профиля
+func (p *Profile) BaseDir() string {
+	base := strings.Replace(p.Location(), p.User.PhoneNumber+"/", "", 1)
+	if base == "" {
+		base = "./"
 	}
+	return base
+}
 
+//============================= ПЕРЕСМОТРЕТЬ ==========================================
+/*
+// Find инициализировать профиль бота
+func Find1(profileDir, configFile string) (prof *Profile, err error) {
+	AddTail(&profileDir)
+	phoneNumber, err := GetPhoneNumberFromPath(profileDir)
+	// Если указан номер телефона тогда инициализируем конкретный профиль, иначе подбираем из списка
+	if err == nil {
+		prof, err = New(profileDir, phoneNumber, phoneNumber, configFile)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		if prof = Load(profileDir, configFile); prof == nil {
+			time.Sleep(3 * time.Second)
+			prof, err = Find1(profileDir, configFile)
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
 	return prof, nil
 }
 
-// Получить список профилей в директории
-func GetList(dir string, random bool) (result []string) {
+*/
 
-	AddTail(&dir)
-	/*
-		//определяем является ли директория профилем
-		if IsProfile(dir) {
-			return []string{getPhoneNumber(dir)}
+/*
+// Load поиск и загрузка профиля из директории
+func Load(dir, configFile string) (prof *Profile) {
+
+	var err error
+	//ищем профиль в указанной директории
+	profileList := GetList(dir, true)
+	//profileList = shuffleArray(profileList)
+
+	for _, p := range profileList {
+		dir := dir + p
+		prof, err = New(dir, p, p, configFile)
+		if err != nil {
+			continue
 		}
-	*/
-	files, err := ioutil.ReadDir(dir)
-	if err != nil {
-		log.Fatal(err)
+		break
 	}
 
-	for _, file := range files {
-
-		if IsProfile(dir + file.Name()) {
-			result = append(result, file.Name())
-		}
-		/*
-			if file.IsDir() && isDigits(file.Name()) {
-				result = append(result, file.Name())
-			}
-		*/
-	}
-
-	if random {
-		return shuffleArray(result)
-	}
-
-	return result
+	return prof
 }
 
-// IsProfile проверяем является ли указанная директория профилем. Профилем являетяс директория с файлом
-func IsProfile(path string) bool {
-	AddTail(&path)
-	/*
-		if _, err := os.Stat(path); err != nil {
-			return false
-		}
-	*/
-
-	if _, err := os.Stat(path + ProFile); err != nil {
-		return false
-	}
-
-	//if os.IsNotExist(err) {
-	//		return false
-	//	}
-	return true
-}
-
-//AddTail добавить слеш в конец строки
-func AddTail(in *string) {
-
-	tm := *in
-	if tm == "" {
-		tm = "./"
-	} else if tm[len(tm)-1:] != "/" {
-		tm += "/"
-	}
-	*in = tm
-}
-
-//извлекаем номер телефона из пути к профилю
-func getPhoneNumber(path string) (result string) {
-
-	//проверяем является ли последний элемент пути числом
-	parts := strings.Split(path, "/")
-	result = parts[len(parts)-2]
-	if !isDigits(result) {
-		return ""
-	}
-
-	return result
-}
-
-func isDigits(s string) bool {
-
-	_, err := strconv.ParseInt(s, 10, 64)
-	if err != nil {
-		return false
-	}
-
-	return true
-
-}
-
-func shuffleArray(src []string) []string {
-	final := make([]string, len(src))
-	rand.Seed(time.Now().UTC().UnixNano())
-	perm := rand.Perm(len(src))
-
-	for i, v := range perm {
-		final[v] = src[i]
-	}
-	return final
-}
+*/

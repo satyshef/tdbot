@@ -27,7 +27,7 @@ func NewHuman(bot *tdbot.Bot) *Human {
 }
 
 // Получить список друзей
-func (h *Human) GetFriendsList() ([]int32, error) {
+func (h *Human) GetFriendsList() ([]int64, error) {
 	if h.Bot.Profile.Config.Mimicry == nil || h.Bot.Profile.Config.Mimicry.FriendName == "" || h.Bot.Profile.Config.Mimicry.FriendCount == 0 {
 		return nil, fmt.Errorf("Mimicry not set")
 	}
@@ -37,7 +37,7 @@ func (h *Human) GetFriendsList() ([]int32, error) {
 		return nil, err
 	}
 
-	var ids []int32
+	var ids []int64
 
 	//Если друзей меньше указанного количества то найти новых
 	if len(friends.UserIDs) < h.Bot.Profile.Config.Mimicry.FriendCount {
@@ -53,7 +53,7 @@ func (h *Human) GetFriendsList() ([]int32, error) {
 	return ids, nil
 }
 
-func (h *Human) GetRandomFriend() (int32, error) {
+func (h *Human) GetRandomFriend() (int64, error) {
 	ids, err := h.GetFriendsList()
 	if err != nil {
 		return 0, err
@@ -68,7 +68,7 @@ func (h *Human) GetRandomFriend() (int32, error) {
 }
 
 //Подружиться
-func (h *Human) MakeFriends(count int) ([]int32, error) {
+func (h *Human) MakeFriends(count int) ([]int64, error) {
 	var memberLimit int32 = 200
 
 	//Друзей берем из группы
@@ -88,14 +88,14 @@ func (h *Human) MakeFriends(count int) ([]int32, error) {
 	} else {
 		members, _ = h.Bot.Client.SearchChatMembers(chat.ID, "", memberLimit, nil)
 	}
-	result := []int32{}
+	result := []int64{}
 
 	//добавляем ботов-друзей в контакты и записываем их id
 	for i := 0; i < count; i++ {
 		//берем случайного бота
 		m := RandInt(0, int(members.TotalCount)-1)
 		//игнорируем себя
-		if h.Bot.Profile.User.ID == members.Members[m].UserID {
+		if h.Bot.Profile.User.ID == members.Members[m].UserID() {
 			continue
 		}
 		//игнорируем создателя и администратора
@@ -103,8 +103,8 @@ func (h *Human) MakeFriends(count int) ([]int32, error) {
 			continue
 		}
 		//fmt.Printf("MEMBER : %#v\n\n", members.Members[m])
-		h.Bot.AddContact(members.Members[m].UserID, h.Bot.Profile.Config.Mimicry.FriendName, fmt.Sprintf("%d", members.Members[m].UserID))
-		result = append(result, members.Members[m].UserID)
+		h.Bot.AddContact(members.Members[m].UserID(), h.Bot.Profile.Config.Mimicry.FriendName, fmt.Sprintf("%d", members.Members[m].UserID))
+		result = append(result, members.Members[m].UserID())
 	}
 
 	return result, nil

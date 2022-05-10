@@ -3,7 +3,7 @@ package user
 
 //User структура данных пользователя
 type User struct {
-	ID          int32  `json:"id"`
+	ID          int64  `json:"id"`
 	PhoneNumber string `json:"phone"`
 	FirstName   string `json:"first_name"`
 	LastName    string `json:"last_name"`

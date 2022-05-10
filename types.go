@@ -5,6 +5,10 @@ import (
 	"github.com/polihoster/tdlib"
 )
 
+const (
+	EventNameSendMessageByPhone = "sendMessageByPhone"
+)
+
 type botStatus string
 
 const (

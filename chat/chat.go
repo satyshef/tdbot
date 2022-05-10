@@ -42,6 +42,8 @@ var (
 	TypePrivateChannel Type = "private_channel"
 	TypeGroup          Type = "group"
 	TypePrivateGroup   Type = "private_group"
+	TypeUser           Type = "user"
+	TypeBot            Type = "bot"
 )
 
 func New(id int64, name string, addr string, chatType Type) *Chat {

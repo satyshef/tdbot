@@ -3,7 +3,6 @@ package eventman
 
 import (
 	"fmt"
-	"time"
 
 	"github.com/polihoster/tdbot/events/event"
 	"github.com/polihoster/tdbot/events/eventman/store/leveldb"
@@ -28,22 +27,27 @@ func New(path string, watchList []string) (*Manager, error) {
 		nil
 }
 
-// AddToWatch ...
+// Добавить событие для наблюдения
 func (m *Manager) AddToWatch(evName ...string) {
 	m.WatchList = append(m.WatchList, evName...)
 }
 
 // Write сохранить событие в хранилище
 func (m *Manager) Write(ev *event.Event) error {
+	//если в списке нет значений значит пишем все события
+	if len(m.WatchList) == 0 {
+		if err := m.Store.Write(ev); err != nil {
+			return fmt.Errorf("Write Event Error: %s\n", err)
+
+		}
+		return nil
+	}
 	for _, name := range m.WatchList {
-		if name == ev.Name || name == "*" {
-			//log.Printf("EV:\n%#v\n\n", ev.Name)
+		if name == ev.Name {
 			if err := m.Store.Write(ev); err != nil {
 				return fmt.Errorf("Write Event Error: %s\n", err)
-
-			} else {
-				return nil
 			}
+			return nil
 		}
 	}
 	return fmt.Errorf("Event not observed")
@@ -60,6 +64,11 @@ func (m *Manager) Search(evType, evName string) ([]*event.Event, error) {
 	return m.Store.Search(evType, evName)
 }
 
+// Search найти все события
+func (m *Manager) All() ([]*event.Event, error) {
+	return m.Store.All()
+}
+
 // Count количество событий
 func (m *Manager) Count(evType, evName string) (int, error) {
 
@@ -71,9 +80,10 @@ func (m *Manager) Count(evType, evName string) (int, error) {
 	return len(evns), nil
 }
 
+/*
 // GetStats статистика события
 // @offset - если указан, то статистика считается по времени начиная с этого смещения назад. Указывается в секундах
-func (m *Manager) GetStats(evType, evName string, offset int32) (int, error) {
+func (m *Manager) GetStats1(evType, evName string, offset int32) (int, error) {
 
 	var evns []*event.Event
 	var err error
@@ -92,4 +102,10 @@ func (m *Manager) GetStats(evType, evName string, offset int32) (int, error) {
 
 	return len(evns), nil
 
+}
+*/
+
+func (m *Manager) Close() error {
+	m.Store.Close()
+	return nil
 }

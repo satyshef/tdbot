@@ -1,6 +1,9 @@
 package tdbot
 
 import (
+	"github.com/polihoster/tdbot/config"
+	"github.com/polihoster/tdbot/events/event"
+	"github.com/polihoster/tdbot/profile"
 	"github.com/polihoster/tdbot/user"
 	"github.com/polihoster/tdlib"
 )
@@ -221,9 +224,11 @@ func (b *Bot) ProfileToSpam() error {
 }
 
 func (b *Bot) ProfileToLogout() error {
+
 	if !b.isDying() {
 		b.Stop()
 	}
+
 	return b.Profile.Move(b.Profile.BaseDir() + "logout")
 }
 
@@ -232,4 +237,19 @@ func (b *Bot) ProfileToBan() error {
 		b.Stop()
 	}
 	return b.Profile.Move(b.Profile.BaseDir() + "banned")
+}
+
+// Проверяем лимиты события
+func (bot *Bot) CheckEventLimits(evnt *event.Event) *tdlib.Error {
+	//bot.Logger.Errorln("Check LImit ", eventType, eventName)
+	exLimits := bot.Profile.CheckLimit(evnt.Type, evnt.Name)
+	for _, limit := range exLimits {
+		//если до оканачания ограничений много времени тогда останавливаем бота
+		if limit.Interval > bot.Profile.Config.APP.DontRebootInterval && bot.Profile.Config.APP.Mode == 2 {
+			bot.Stop()
+		}
+		l := &config.Limits{evnt.Type: {evnt.Name: exLimits}}
+		return tdlib.NewError(profile.ErrorCodeLimitExceeded, "BOT_LIMIT_EXCEEDED", l.JSON())
+	}
+	return nil
 }

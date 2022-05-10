@@ -88,13 +88,10 @@ func (s *Store) SearchByTime(evType, evName string, minTime, maxTime int64) (evn
 // @evType - тип события
 // @evName - имя события
 func (s *Store) Search(evType, evName string) (evns []*event.Event, err error) {
-
 	if evType == "" && evName != "" {
 		return nil, fmt.Errorf("%s", "Event name set and type not specified")
 	}
-
 	var rang *util.Range
-
 	//Если не указан тип и имя тогда возвращаем все значения(range = nil)
 	if evType != "" && evName != "" {
 		prefix := []byte(fmt.Sprintf("%s-%s-", evType, evName))
@@ -103,18 +100,26 @@ func (s *Store) Search(evType, evName string) (evns []*event.Event, err error) {
 		prefix := []byte(fmt.Sprintf("%s-", evType))
 		rang = util.BytesPrefix(prefix)
 	}
-
 	iter := s.db.NewIterator(rang, nil)
-
 	for iter.Next() {
 		if ev := parseRecord(iter.Key(), iter.Value()); ev != nil {
 			evns = append(evns, ev)
 		}
-
 	}
 	iter.Release()
 	err = iter.Error()
+	return evns, err
+}
 
+func (s *Store) All() (evns []*event.Event, err error) {
+	iter := s.db.NewIterator(nil, nil)
+	for iter.Next() {
+		if ev := parseRecord(iter.Key(), iter.Value()); ev != nil {
+			evns = append(evns, ev)
+		}
+	}
+	iter.Release()
+	err = iter.Error()
 	return evns, err
 }
 

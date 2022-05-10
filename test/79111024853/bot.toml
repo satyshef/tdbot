@@ -1,0 +1,79 @@
+[app]
+  id = "49985"
+  hash = "76cac4363826d1e762d41399839a5870"
+  sys_version = "11"
+  app_version = "9.3"
+  lang_pack = "ru"
+  device_model = "Huawei P9 lite"
+  auth_pass = "Poli6575"
+  hint_pass = "P5"
+  first_name = "Марианка"
+  photo = ""
+  show_phone_mode = 0
+  mode = 2
+  max_interval = 10
+  set_online = false
+  banned_dir = "banned"
+  logout_dir = "logout"
+  foul_dir = "foul"
+
+[limits]
+  [limits.error]
+
+    [[limits.error.importContacts]]
+      Interval = 86400
+      Limit = 1
+  [limits.request]
+
+    [[limits.request.addChatMember]]
+      Interval = 86400
+      Limit = 40
+
+    [[limits.request.getSupergroupMembers]]
+      Interval = 86400
+      Limit = 50
+
+    [[limits.request.importContacts]]
+      Interval = 1
+      Limit = 1
+
+    [[limits.request.importContacts]]
+      Interval = 86400
+      Limit = 40
+
+    [[limits.request.searchPublicChats]]
+      Interval = 7
+      Limit = 1
+
+    [[limits.request.searchPublicChats]]
+      Interval = 86400
+      Limit = 3
+
+    [[limits.request.sendMessage]]
+      Interval = 1
+      Limit = 1
+
+    [[limits.request.sendMessage]]
+      Interval = 86400
+      Limit = 40
+  [limits.response]
+
+    [[limits.response.sendMessageByPhone]]
+      Interval = 3600
+      Limit = 2
+
+    [[limits.response.sendMessageByPhone]]
+      Interval = 86400
+      Limit = 20
+
+[log]
+  level = 6
+  file = "/tmp/tbot.log"
+
+[proxy]
+  host = "node-ru-202.astroproxy.com"
+  port = 10488
+  user = "polihoster"
+  pass = "TajsyRt64"
+  type = "socks5"
+  enable = false

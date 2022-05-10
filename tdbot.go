@@ -53,7 +53,7 @@ func New(prof *profile.Profile) *Bot {
 func initClient(prof *profile.Profile) *tdlib.Client {
 
 	tdlib.SetLogVerbosityLevel(1)
-	tdlib.SetFilePath(prof.Dir + "client.log")
+	tdlib.SetFilePath(prof.Location() + "client.log")
 	c := tdlib.NewClient(
 		tdlib.Config{
 			APIID:                  prof.Config.APP.ID,
@@ -66,8 +66,8 @@ func initClient(prof *profile.Profile) *tdlib.Client {
 			UseFileDatabase:        false, //
 			UseChatInfoDatabase:    false, //
 			UseTestDataCenter:      false,
-			DatabaseDirectory:      prof.Dir + "database",
-			FileDirectory:          prof.Dir + "files",
+			DatabaseDirectory:      prof.Location() + "database",
+			FileDirectory:          prof.Location() + "files",
 			IgnoreFileNames:        false,
 			UseSecretChats:         true,
 			EnableStorageOptimizer: true,
@@ -84,6 +84,7 @@ func (bot *Bot) destroyClient() {
 
 	bot.Client.Stop()
 	//time.Sleep(time.Second * 5)
+	//bot.Client = nil
 }
 
 func initLog(c *config.Log) *logrus.Logger {
@@ -106,6 +107,8 @@ func (bot *Bot) Start() *tdlib.Error {
 		return tdlib.NewError(profile.ErrorCodeNotInit, "PROFILE_NOT_INIT", "Profile not init")
 	}
 
+	bot.Profile.Reload()
+
 	bot.Status = StatusInit
 	bot.Profile.User.Status = user.StatusInitialization
 
@@ -122,97 +125,52 @@ func (bot *Bot) Start() *tdlib.Error {
 		return err.(*tdlib.Error)
 	}
 
-	/*
-	* реализовать адекватное поведение системы если работа клиента прервалась из вне
-
-	 */
+	// TODO: реализовать адекватное поведение системы если работа клиента прервалась из вне
 
 	bot.Logger.Infoln("Init proxy ...")
 	err := bot.InitProxy(true)
 	if err != nil {
+		bot.Logger.Errorf("%#v", err)
 		if err.Message != "BOT_UNKNOWN_PROXY_TYPE" {
 			bot.Stop()
-		} else {
-			bot.Logger.Errorf("%#v", err)
 		}
-
 		return err
 	}
-	/*
-		for {
-			err := bot.InitProxy(true)
-			if err != nil {
-
-				// Если бот остановлен (501) или не авторизован(401) тогда выходим
-				//if err.Code == 503 || err.Coded == 401 {
-				if err.Code == profile.ErrorCodeDirNotExists {
-					bot.Logger.Errorln(err.Message)
-					bot.Stop()
-					return err
-				}
-
-				bot.Logger.Errorf("Proxy Error : %#v\n", err)
-				bot.Logger.Infoln("Reconnect to proxy ...")
-				time.Sleep(time.Second * 1)
-			} else {
-				bot.Logger.Infoln("Init proxy success")
-				break
-			}
-		}
-	*/
 	// bot authorization
 	err = bot.AuthBot() //2
 	if err != nil {
-		//bot.Logger.Error("Auth ERROR : ", err.Message)
 		bot.Stop()
-		//return fmt.Errorf("Auth ERROR : %s", err.Message)
 		return err
 	}
 
 	// получаем инфу об аккаунте
 	var me *user.User
-	//3
 	if me, err = bot.GetMe(); err != nil || me.ID == 0 {
-		//bot.Logger.Errorf("GetMe Error : %s\n\n", err)
 		bot.Stop()
-		//return fmt.Errorf("GetMe Error : %s", err.Message)
 		return err
 	}
-
 	// устанавливаем имя из конфигурации
 	if bot.Profile.Config.APP.FirstName != "" && bot.Profile.Config.APP.FirstName != me.FirstName {
 		if err := bot.SetName(bot.Profile.Config.APP.FirstName, ""); err != nil {
-			//bot.Logger.Errorf("Set Name Error: %s\n", err)
 			bot.Stop()
-			//return fmt.Errorf("Set Name Error: %s", err.Message)
 			return err
 		}
 	}
-
 	// Устанавливаем пароль
 	if err := bot.SetPassword(bot.Profile.Config.APP.AuthPass, bot.Profile.Config.APP.HintPass); err != nil {
-		//bot.Logger.Errorf("Set Password Error : %s\n\n", err)
 		bot.Stop()
-		//return fmt.Errorf("Set Password Error : %s", err.Message)
 		return err
 	}
-
 	// Установить фото профиля
 	if err := bot.InitProfilePhoto(bot.Profile.Config.APP.Photo); err != nil {
-		//bot.Logger.Errorf("Set Photo Error : %s\n\n", err)
 		bot.Stop()
-		//return fmt.Errorf("Set Photo Error : %s", err.Message)
 		return err
 	}
-
 	// Параметры отображения номера телефона
 	if err := bot.SetPhoneMode(bot.Profile.Config.APP.ShowPhoneMode); err != nil {
-		//bot.Logger.Errorf("Set Phone Mode Error : %s\n\n", err)
 		bot.Stop()
-		//return fmt.Errorf("Set Phone Mode Error : %s", err.Message)
 		return err
 	}
-
 	// Установить статус online
 	var e error
 	if bot.Profile.Config.APP.SetOnline {
@@ -220,16 +178,10 @@ func (bot *Bot) Start() *tdlib.Error {
 	} else {
 		_, e = bot.Client.SetOption("online", tdlib.NewOptionValueBoolean(false))
 	}
-
 	if e != nil {
-		//bot.Logger.Errorf("Set Option Error : %s\n\n", e.Error())
 		bot.Stop()
-		//return fmt.Errorf("Set Option Error : %s", e.Error())
 		return err
 	}
-
-	//fmt.Printf("\nUSER : %#v\n\n", bot.Profile.User)
-
 	fmt.Printf("\n	Phone : %s\n	UID : %d\n	FirstName : %s\n	LastName : %s\n	UserName : %s\n	WasOnline : %s\n	Location : %s\n\n",
 		bot.Profile.User.PhoneNumber,
 		bot.Profile.User.ID,
@@ -239,6 +191,7 @@ func (bot *Bot) Start() *tdlib.Error {
 		time.Unix(int64(bot.Profile.User.WasOnline), 0),
 		bot.Profile.User.Location,
 	)
+
 	bot.Status = StatusReady
 	bot.Profile.User.Status = user.StatusReady
 
@@ -261,18 +214,14 @@ func (bot *Bot) Start() *tdlib.Error {
 
 // Stop ...
 func (bot *Bot) Stop() {
-	//bot.Logger.Infoln("Status ", bot.Status)
 	if bot.isDying() {
 		return
 	}
-
 	bot.Logger.Infoln("Stopping the bot ...")
-
 	bot.Status = StatusStopping
 	bot.Profile.User.Status = user.StatusStopped
-
 	bot.destroyClient()
-
+	bot.Profile.Close()
 	bot.Logger.Infoln("Stopping finish")
 	bot.Status = StatusStopped
 }
@@ -294,7 +243,7 @@ func (bot *Bot) Restart() {
 }
 
 func (bot *Bot) isDying() bool {
-	if bot.Status == StatusStopped || bot.Status == StatusStopping {
+	if bot.Status == StatusStopped || bot.Status == StatusStopping || bot.Client == nil {
 		return true
 	}
 	return false
@@ -302,6 +251,9 @@ func (bot *Bot) isDying() bool {
 
 // Init proxy server
 func (bot *Bot) InitProxy(check bool) *tdlib.Error {
+	if bot.isDying() {
+		return tdlib.NewError(ErrorCodeSystem, "BOT_DYING", "")
+	}
 	/*
 		if !bot.isReady() {
 			return tdlib.NewError(ErrorSystem, "BOT_NOT_READY", "")
@@ -318,13 +270,16 @@ func (bot *Bot) InitProxy(check bool) *tdlib.Error {
 	}
 
 	if bot.Profile.Config.Proxy != nil && !bot.Profile.Config.Proxy.Enable {
-		//bot.Client.DisableProxy()
-		//Если установлен параметр disable удаляем все прокси(ОБДУМАТЬ)
-		bot.Logger.Infoln("Remove All Proxies ...")
-		err := bot.RemoveAllProxy()
+		bot.Logger.Infoln("Disabling Proxies ...")
+		_, err := bot.Client.DisableProxy()
+		/*
+			//Если установлен параметр disable удаляем все прокси(ОБДУМАТЬ)
+
+			err := bot.RemoveAllProxy()
+		*/
 		if err != nil {
-			bot.Logger.Errorf("Proxy not remove : %#v\n", err)
-			return err
+			bot.Logger.Errorf("Proxy not disable : %#v\n", err)
+			return err.(*tdlib.Error)
 		}
 		return nil
 	} else {
@@ -375,8 +330,13 @@ func (bot *Bot) InitProxy(check bool) *tdlib.Error {
 			return e.(*tdlib.Error)
 		}
 
-		bot.Logger.Infoln("Proxy ", prox.Server)
-		bot.Logger.Infoln("Proxy ID", prox.ID)
+		_, e = bot.Client.EnableProxy(prox.ID)
+		if e != nil {
+			return e.(*tdlib.Error)
+		}
+
+		bot.Logger.Infoln("Set Proxy ", prox.Server)
+		//bot.Logger.Infoln("Proxy ID", prox.ID)
 
 		if check {
 			ping, e := bot.Client.PingProxy(prox.ID)
@@ -386,6 +346,7 @@ func (bot *Bot) InitProxy(check bool) *tdlib.Error {
 
 			bot.Logger.Infoln("Ping ", ping.Seconds)
 		}
+
 	}
 
 	return nil
@@ -475,8 +436,9 @@ func (bot *Bot) AuthBot() *tdlib.Error {
 			}
 			//bot.Profile.User.Status = user.StatusSendPhone
 			bot.Logger.Infoln("Send phone ...")
+
 			if _, err := bot.Client.SendPhoneNumber(bot.Profile.User.PhoneNumber); err != nil {
-				//bot.Logger.Errorf("SEND PHONE ERROR : %s\n", err.(*tdlib.Error).Message)
+				//bot.Logger.Errorf("SEND PHONE ERROR : %#v\n", err.(*tdlib.Error))
 				//fmt.Printf("SEND PHONE ERROR (user status %s): %s\n", bot.Profile.User.Status, err.Error())
 				return err.(*tdlib.Error)
 				//time.Sleep(time.Second * 3)
@@ -512,10 +474,14 @@ func (bot *Bot) AuthBot() *tdlib.Error {
 			}
 			_, err := bot.Client.SendAuthPassword(pass)
 			if err != nil {
-				bot.Logger.Errorf("Authorization Error %#v\n", err)
-				if bot.Profile.Config.APP.AuthPass != "" {
-					bot.Profile.Config.APP.AuthPass = ""
-				}
+				bot.Logger.Errorf("Send password error %s\n", err.Error())
+				//TEST!!!!
+				/*
+					if err.(*tdlib.Error).Code == tdlib.ErrorCodePassInvalid && bot.Profile.Config.APP.AuthPass != "" {
+						bot.Profile.Config.APP.AuthPass = ""
+					}
+				*/
+				continue
 			}
 
 		case tdlib.AuthorizationStateWaitRegistrationType:
