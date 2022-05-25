@@ -4,8 +4,8 @@ package eventman
 import (
 	"fmt"
 
-	"github.com/polihoster/tdbot/events/event"
-	"github.com/polihoster/tdbot/events/eventman/store/leveldb"
+	"github.com/satyshef/tdbot/events/event"
+	"github.com/satyshef/tdbot/events/eventman/store/leveldb"
 )
 
 // Manager ....

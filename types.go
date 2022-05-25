@@ -1,8 +1,8 @@
 package tdbot
 
 import (
-	"github.com/polihoster/tdbot/user"
-	"github.com/polihoster/tdlib"
+	"github.com/satyshef/tdbot/user"
+	"github.com/satyshef/tdlib"
 )
 
 const (

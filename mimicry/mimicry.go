@@ -3,9 +3,9 @@ package mimicry
 import (
 	"fmt"
 
-	"github.com/polihoster/tdbot"
-	"github.com/polihoster/tdbot/user"
-	"github.com/polihoster/tdlib"
+	"github.com/satyshef/tdbot"
+	"github.com/satyshef/tdbot/user"
+	"github.com/satyshef/tdlib"
 
 	"github.com/sirupsen/logrus"
 )

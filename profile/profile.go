@@ -8,9 +8,9 @@ import (
 	"os"
 	"runtime"
 
-	"github.com/polihoster/tdbot/config"
-	"github.com/polihoster/tdbot/events/eventman"
-	"github.com/polihoster/tdbot/user"
+	"github.com/satyshef/tdbot/config"
+	"github.com/satyshef/tdbot/events/eventman"
+	"github.com/satyshef/tdbot/user"
 )
 
 //Директория с конфигурацией по умолчанию

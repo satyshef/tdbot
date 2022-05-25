@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/polihoster/tdbot/config"
+	"github.com/satyshef/tdbot/config"
 )
 
 //Переместить профиль

@@ -3,9 +3,9 @@ package tdbot
 import (
 	"strings"
 
-	"github.com/polihoster/tdbot/events/event"
-	"github.com/polihoster/tdbot/profile"
-	"github.com/polihoster/tdlib"
+	"github.com/satyshef/tdbot/events/event"
+	"github.com/satyshef/tdbot/profile"
+	"github.com/satyshef/tdlib"
 )
 
 // обработчик событий Телеграм клиента

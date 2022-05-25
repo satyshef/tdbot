@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/polihoster/tdbot/chat"
-	"github.com/polihoster/tdlib"
+	"github.com/satyshef/tdbot/chat"
+	"github.com/satyshef/tdlib"
 )
 
 // ============================ NEW METHODS ======================================================

@@ -6,10 +6,10 @@ import (
 
 	"time"
 
-	"github.com/polihoster/tdbot/config"
-	"github.com/polihoster/tdbot/profile"
-	"github.com/polihoster/tdbot/user"
-	"github.com/polihoster/tdlib"
+	"github.com/satyshef/tdbot/config"
+	"github.com/satyshef/tdbot/profile"
+	"github.com/satyshef/tdbot/user"
+	"github.com/satyshef/tdlib"
 	"github.com/sirupsen/logrus"
 )
 

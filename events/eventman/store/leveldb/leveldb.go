@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/polihoster/tdbot/events/event"
+	"github.com/satyshef/tdbot/events/event"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/util"
 )
