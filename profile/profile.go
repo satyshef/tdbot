@@ -161,7 +161,8 @@ func GetList(dir string, random bool) (result []string) {
 	AddTail(&dir)
 	files, err := ioutil.ReadDir(dir)
 	if err != nil {
-		log.Fatal(err)
+		return result
+		//log.Fatal(err)
 	}
 	for _, file := range files {
 		if IsProfile(dir + file.Name()) {

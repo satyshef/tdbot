@@ -20,6 +20,7 @@ type (
 		Profile   *profile.Profile
 		Status    botStatus
 		InputChan chan string
+		StopWork  chan bool
 		//PrivateChan *tdlib.Chat
 	}
 )
@@ -29,7 +30,7 @@ func New(prof *profile.Profile) *Bot {
 	if prof == nil {
 		log.Fatal("Profile nil value")
 	}
-	fmt.Printf("Инициализация бота %s...\n", prof.User.PhoneNumber)
+	fmt.Printf("\nBot initialization %s...\n\n", prof.User.PhoneNumber)
 	log := initLog(prof.Config.Log)
 	tgClient := initClient(prof)
 	bot := &Bot{
@@ -38,6 +39,7 @@ func New(prof *profile.Profile) *Bot {
 		Logger:    log,
 		Status:    StatusStopped,
 		InputChan: make(chan string, 1),
+		StopWork:  make(chan bool),
 	}
 	/*
 		time.Sleep(time.Millisecond * 100)
@@ -118,23 +120,25 @@ func (bot *Bot) Start() *tdlib.Error {
 	bot.Logger.Infoln("Handler OK")
 
 	//запуск горутины принимающей обновления телеграм
-	if err := bot.Client.Start(); err != nil {
+	//bot.Client.Run()
+	bot.Logger.Infoln("Starting client")
+	if err := bot.Client.Run(); err != nil {
 		//fmt.Println("Start error :", err)
 		//bot.Logger.Errorf("Client Start Error : %#v\n", err)
 		bot.Stop()
 		return err.(*tdlib.Error)
 	}
-
+	bot.Logger.Infoln("Client OK")
 	// TODO: реализовать адекватное поведение системы если работа клиента прервалась из вне
-
 	bot.Logger.Infoln("Init proxy ...")
 	err := bot.InitProxy(true)
+
 	if err != nil {
-		bot.Logger.Errorf("%#v", err)
-		if err.Message != "BOT_UNKNOWN_PROXY_TYPE" {
-			bot.Stop()
+		bot.Logger.Errorf("PROXY ERROR %#v", err)
+		if err.Message == "BOT_UNKNOWN_PROXY_TYPE" {
+			return err
 		}
-		return err
+		bot.Stop()
 	}
 	// bot authorization
 	err = bot.AuthBot() //2
@@ -192,22 +196,19 @@ func (bot *Bot) Start() *tdlib.Error {
 		bot.Profile.User.Location,
 	)
 
+	state, e := bot.Client.GetAuthorizationState()
+	if e != nil {
+		return e.(*tdlib.Error)
+	}
+
+	for state.GetAuthorizationStateEnum() != tdlib.AuthorizationStateReadyType {
+		time.Sleep(time.Second * 1)
+	}
+
 	bot.Status = StatusReady
 	bot.Profile.User.Status = user.StatusReady
 
-	if bot.Profile.Config.APP.Mode == 1 {
-		go func() {
-			ch := bot.Client.GetRawUpdatesChannel(10)
-			for update := range ch {
-
-				if update.Data["@type"] == "updateNewMessage" {
-					fmt.Printf("INCOMING MESSAGE: \n %#v\n\n", update.Data["message"])
-				}
-
-			}
-		}()
-	}
-
+	<-bot.StopWork
 	return nil
 
 }
@@ -217,11 +218,15 @@ func (bot *Bot) Stop() {
 	if bot.isDying() {
 		return
 	}
+	currentStatus := bot.Status
 	bot.Logger.Infoln("Stopping the bot ...")
 	bot.Status = StatusStopping
 	bot.Profile.User.Status = user.StatusStopped
 	bot.destroyClient()
 	bot.Profile.Close()
+	if currentStatus == StatusReady {
+		bot.StopWork <- true
+	}
 	bot.Logger.Infoln("Stopping finish")
 	bot.Status = StatusStopped
 }
@@ -243,7 +248,7 @@ func (bot *Bot) Restart() {
 }
 
 func (bot *Bot) isDying() bool {
-	if bot.Status == StatusStopped || bot.Status == StatusStopping || bot.Client == nil {
+	if bot == nil || bot.Status == StatusStopped || bot.Status == StatusStopping || bot.Client == nil {
 		return true
 	}
 	return false

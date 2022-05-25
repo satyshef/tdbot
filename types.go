@@ -29,12 +29,12 @@ const (
 )
 
 const (
-	//коды ошибок данного модуля начинаются с 3
-	ErrorCodeSystem           = 301
-	ErrorCodeWrongData        = 302
-	ErrorCodeContactDuplicate = 303
-	ErrorCodeUserNotExists    = 304
-	ErrorCodeNotInit          = 305
+	//коды ошибок данного модуля начинаются с 41
+	ErrorCodeSystem           = 411
+	ErrorCodeWrongData        = 412
+	ErrorCodeContactDuplicate = 413
+	ErrorCodeUserNotExists    = 414
+	ErrorCodeNotInit          = 415
 )
 
 //ConvertUser конвертируем пользователя tdlib в собственную структуру
