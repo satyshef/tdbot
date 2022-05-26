@@ -2,6 +2,8 @@ module github.com/satyshef/tdbot
 
 go 1.15
 
+// For local develop enable replace
+
 //replace github.com/satyshef/tdlib => ../tdlib
 
 //replace github.com/satyshef/tdbot/chat => ./chat
