@@ -123,7 +123,7 @@ func (bot *Bot) Start() *tdlib.Error {
 	//bot.Client.Run()
 	bot.Logger.Infoln("Starting client")
 	if err := bot.Client.Run(); err != nil {
-		//fmt.Println("Start error :", err)
+		fmt.Println("Start error :", err)
 		//bot.Logger.Errorf("Client Start Error : %#v\n", err)
 		bot.Stop()
 		return err.(*tdlib.Error)
