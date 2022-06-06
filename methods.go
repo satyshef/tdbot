@@ -17,7 +17,7 @@ import (
 // @name - имя группы
 // @msg - текст сообщения
 func (bot *Bot) SendMessageToGroup(name string, msg string) (int64, *tdlib.Error) {
-	if bot.isDying() {
+	if !bot.IsRun() {
 		return 0, tdlib.NewError(ErrorCodeWrongData, "BOT_SYSTEM_ERROR", "Bot dying")
 	}
 	if msg == "" {
@@ -45,7 +45,7 @@ func (bot *Bot) SendMessageToGroup(name string, msg string) (int64, *tdlib.Error
 // @cid - ID чата
 // @msg - текст сообщения
 func (bot *Bot) SendMessageByCID(cid int64, msg string) (int64, *tdlib.Error) {
-	if bot.isDying() {
+	if !bot.IsRun() {
 		return 0, tdlib.NewError(ErrorCodeWrongData, "BOT_SYSTEM_ERROR", "Bot dying")
 	}
 	ft, _ := bot.Client.ParseMarkdown(tdlib.NewFormattedText(msg, nil))
@@ -69,7 +69,7 @@ func (bot *Bot) SendMessageByCID(cid int64, msg string) (int64, *tdlib.Error) {
 // CreatePrivateChat создать новый чат с пользователем
 // @uid - ID пользователя с которым нужно создать чат
 func (bot *Bot) CreatePrivateChat(uid int64) (*tdlib.Chat, *tdlib.Error) {
-	if bot.isDying() {
+	if !bot.IsRun() {
 		return nil, tdlib.NewError(ErrorCodeWrongData, "BOT_SYSTEM_ERROR", "Bot dying")
 	}
 	chat, err := bot.Client.CreatePrivateChat(uid, true)
@@ -84,7 +84,7 @@ func (bot *Bot) CreatePrivateChat(uid int64) (*tdlib.Chat, *tdlib.Error) {
 // Глобальный поиск чатов
 // @query - ключевая фраза поиска
 func (bot *Bot) SearchChats(query string) ([]*chat.Chat, *tdlib.Error) {
-	if bot.isDying() {
+	if !bot.IsRun() {
 		return nil, tdlib.NewError(ErrorCodeWrongData, "BOT_SYSTEM_ERROR", "Bot dying")
 	}
 	chats, err := bot.Client.SearchPublicChats(query)
@@ -118,7 +118,7 @@ func (bot *Bot) SearchChats(query string) ([]*chat.Chat, *tdlib.Error) {
 //groups, e := bot.Client.GetChats(nil, 0, 0, 1000)
 //Список чатов в которых состоит бот
 func (bot *Bot) GetChats() ([]*chat.Chat, *tdlib.Error) {
-	if bot.isDying() {
+	if !bot.IsRun() {
 		return nil, tdlib.NewError(ErrorCodeWrongData, "BOT_SYSTEM_ERROR", "Bot dying")
 	}
 	chats, err := bot.Client.GetChats(nil, 0, 0, 1000)
@@ -151,7 +151,7 @@ func (bot *Bot) GetChats() ([]*chat.Chat, *tdlib.Error) {
 // Получить полную информацию о чате
 // @cid - чат id
 func (bot *Bot) GetChatFullInfo(cid int64) (*chat.Chat, *tdlib.Error) {
-	if bot.isDying() {
+	if !bot.IsRun() {
 		return nil, tdlib.NewError(ErrorCodeWrongData, "BOT_SYSTEM_ERROR", "Bot dying")
 	}
 	chatInfo, err := bot.Client.GetChat(cid)
@@ -207,7 +207,7 @@ func (bot *Bot) GetChatFullInfo(cid int64) (*chat.Chat, *tdlib.Error) {
 }
 
 func (bot *Bot) InviteByUserName(username, chatname string) *tdlib.Error {
-	if bot.isDying() {
+	if !bot.IsRun() {
 		return tdlib.NewError(ErrorCodeWrongData, "BOT_SYSTEM_ERROR", "Bot dying")
 	}
 
@@ -234,7 +234,7 @@ func (bot *Bot) InviteByUserName(username, chatname string) *tdlib.Error {
 }
 
 func (bot *Bot) InviteByUserPhone(phone, chatname string) *tdlib.Error {
-	if bot.isDying() {
+	if !bot.IsRun() {
 		return tdlib.NewError(ErrorCodeWrongData, "BOT_SYSTEM_ERROR", "Bot dying")
 	}
 
@@ -264,7 +264,7 @@ func (bot *Bot) InviteByUserPhone(phone, chatname string) *tdlib.Error {
 
 //работает криво. прежде чем добавить нужно получить участника методом GetChatMembers
 func (bot *Bot) InviteByUserID(userid int64, userchat, chat string) *tdlib.Error {
-	if bot.isDying() {
+	if !bot.IsRun() {
 		return tdlib.NewError(ErrorCodeWrongData, "BOT_SYSTEM_ERROR", "Bot dying")
 	}
 	destChat, e := bot.GetChat(chat, false)
@@ -299,7 +299,7 @@ func (bot *Bot) InviteByUserID(userid int64, userchat, chat string) *tdlib.Error
 // @uid - ID пользователя
 // @chatName - имя чата в которой находится пользователь
 func (bot *Bot) GetUser(uid int64, chatName string) (*tdlib.UserFullInfo, *tdlib.Error) {
-	if bot.isDying() {
+	if !bot.IsRun() {
 		return nil, tdlib.NewError(ErrorCodeWrongData, "BOT_SYSTEM_ERROR", "Bot dying")
 	}
 	if chatName != "" {
@@ -375,7 +375,7 @@ func (bot *Bot) GetChatUsers_(chatname string, offset int32, limit int32) ([]tdl
 
 // Загрузить список пользователей группы с полной информацией о них
 func (bot *Bot) GetChatUsers(chatname string, offset int32, limit int32) (result []tdlib.User, err *tdlib.Error) {
-	if bot.isDying() {
+	if !bot.IsRun() {
 		return nil, tdlib.NewError(ErrorCodeWrongData, "BOT_SYSTEM_ERROR", "Bot dying")
 	}
 	if limit < 0 || limit > 10000 {
@@ -420,12 +420,12 @@ func (bot *Bot) GetChatUsers(chatname string, offset int32, limit int32) (result
 		}
 
 		//если количество упользователей меньше count то выходим из цикла
-		/*
-			ПЕРЕДЕЛАТЬ!!!!!
-			if count > len {
-				break
-			}
-		*/
+
+		//	ПЕРЕДЕЛАТЬ!!!!!
+		if count > len {
+			break
+		}
+
 		offset += len
 
 	}
@@ -435,7 +435,7 @@ func (bot *Bot) GetChatUsers(chatname string, offset int32, limit int32) (result
 // Загрузить список участников группы. Группа может быть как обычная(до 200) так и супергруппа(до 200к) участников. Возвращает ID участников и их статус
 // @chatname - имя или сслыка на чат
 func (bot *Bot) GetChatMembers(chatname string, offset int32, limit int32) ([]tdlib.ChatMember, *tdlib.Error) {
-	if bot.isDying() {
+	if !bot.IsRun() {
 		return nil, tdlib.NewError(ErrorCodeWrongData, "BOT_SYSTEM_ERROR", "Bot dying")
 	}
 	if limit < 0 || limit > 10000 {
@@ -520,7 +520,7 @@ func (bot *Bot) GetChatMembers(chatname string, offset int32, limit int32) ([]td
 
 // Скопировать участников одной группы в другую
 func (bot *Bot) CopyChatUsers(source, destination string, offset int32, limit int32) ([]tdlib.ChatMember, *tdlib.Error) {
-	if bot.isDying() {
+	if !bot.IsRun() {
 		return nil, tdlib.NewError(ErrorCodeWrongData, "BOT_SYSTEM_ERROR", "Bot dying")
 	}
 	result := []tdlib.ChatMember{}
@@ -575,7 +575,7 @@ func (bot *Bot) CopyChatUsers(source, destination string, offset int32, limit in
 // @firstname Имя пользователя
 // @lastname Фамилия пользователя
 func (bot *Bot) ImportContact(phone, firstname, lastname string) (int64, *tdlib.Error) {
-	if bot.isDying() {
+	if !bot.IsRun() {
 		return 0, tdlib.NewError(ErrorCodeWrongData, "BOT_SYSTEM_ERROR", "Bot dying")
 	}
 	if phone == "" {
@@ -607,11 +607,11 @@ func (bot *Bot) ImportContact(phone, firstname, lastname string) (int64, *tdlib.
 }
 
 // AddContact добавить контакт НЕ РАБОТАЕТ!!!!!
-// @phone Номер телефона пользователя
+// @uid id пользователя
 // @firstname Имя пользователя
 // @lastname Фамилия пользователя
 func (bot *Bot) AddContact(uid int64, firstname, lastname string) (int64, *tdlib.Error) {
-	if bot.isDying() {
+	if !bot.IsRun() {
 		return 0, tdlib.NewError(ErrorCodeWrongData, "BOT_SYSTEM_ERROR", "Bot dying")
 	}
 	if uid == 0 {
@@ -647,7 +647,7 @@ func (bot *Bot) AddContact(uid int64, firstname, lastname string) (int64, *tdlib
 // @msg - текст сообщения
 // @ontime - максимальное время не активности пользователя, если пользователь был в сети до этого времени то сообщение не отправляется
 func (bot *Bot) SendMessageByPhone(phone, msg string, ontime int32) (int64, *tdlib.Error) {
-	if bot.isDying() {
+	if !bot.IsRun() {
 		return 0, tdlib.NewError(ErrorCodeWrongData, "BOT_SYSTEM_ERROR", "Bot dying")
 	}
 	// вводим новое событие для пары ImportContacts и SendMessage
@@ -676,7 +676,7 @@ func (bot *Bot) SendMessageByPhone(phone, msg string, ontime int32) (int64, *tdl
 // @username - имя получателя
 // @ontime - максимальное время не активности пользователя, если пользователь был в сети до этого времени то сообщение не отправляется
 func (bot *Bot) SendMessageByName(username string, msg string, ontime int32) (int64, *tdlib.Error) {
-	if bot.isDying() {
+	if !bot.IsRun() {
 		return 0, tdlib.NewError(ErrorCodeWrongData, "BOT_SYSTEM_ERROR", "Bot dying")
 	}
 	if msg == "" {
@@ -705,7 +705,7 @@ func (bot *Bot) SendMessageByName(username string, msg string, ontime int32) (in
 // @uid - ID пользователя
 // @ontime - максимальное время не активности пользователя, если пользователь был в сети до этого времени то сообщение не отправляется
 func (bot *Bot) SendMessageByUID(uid int64, msg string, ontime int32) (int64, *tdlib.Error) {
-	if bot.isDying() {
+	if !bot.IsRun() {
 		return 0, tdlib.NewError(ErrorCodeWrongData, "BOT_SYSTEM_ERROR", "Bot dying")
 	}
 	if uid == 0 {
@@ -815,7 +815,7 @@ func (bot *Bot) WaitMessageState(msg *tdlib.Message) *tdlib.Error {
 //Загрузить информацию о чате
 // @chatID - идентификатор чата, может быть имя чата, ссылка на него, chat id
 func (bot *Bot) GetChat(chatname string, join bool) (*tdlib.Chat, *tdlib.Error) {
-	if bot.isDying() {
+	if !bot.IsRun() {
 		return nil, tdlib.NewError(ErrorCodeWrongData, "BOT_SYSTEM_ERROR", "Bot dying")
 	}
 	if chatname == "" {
@@ -902,7 +902,7 @@ func (bot *Bot) GetChatList(limit int) ([]*tdlib.Chat, *tdlib.Error) {
 }
 
 func (bot *Bot) getChatList(limit int, allChats *[]*tdlib.Chat, haveFullChatList *bool) *tdlib.Error {
-	if bot.isDying() {
+	if !bot.IsRun() {
 		return tdlib.NewError(ErrorCodeWrongData, "BOT_SYSTEM_ERROR", "Bot dying")
 	}
 	if !*haveFullChatList && limit > len(*allChats) {

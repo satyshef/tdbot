@@ -83,7 +83,7 @@ func (bot *Bot) destroyClient() {
 		bot.Logger.Errorln("Client not init")
 		return
 	}
-
+	//C.td_json_client_destroy(bot.Client)
 	bot.Client.Stop()
 	//time.Sleep(time.Second * 5)
 	//bot.Client = nil
@@ -100,14 +100,16 @@ func (bot *Bot) init() {
 }
 
 //Start запуск бота
+//
+//
 func (bot *Bot) Start() *tdlib.Error {
-	bot.Logger.Infoln("Starting the bot ...")
-
+	if bot == nil {
+		return tdlib.NewError(profile.ErrorCodeNotInit, "BOT_NOT_INIT", "Bot not init")
+	}
 	if bot.Profile == nil {
-		//bot.Logger.Errorf("Profile not init")
-		//return fmt.Errorf("Profile not init")
 		return tdlib.NewError(profile.ErrorCodeNotInit, "PROFILE_NOT_INIT", "Profile not init")
 	}
+	bot.Logger.Infoln("Starting the bot ...")
 
 	bot.Profile.Reload()
 
@@ -128,11 +130,11 @@ func (bot *Bot) Start() *tdlib.Error {
 		bot.Stop()
 		return err.(*tdlib.Error)
 	}
+	//bot.Logger.Infoln("STATUS :", bot.Status)
 	bot.Logger.Infoln("Client OK")
 	// TODO: реализовать адекватное поведение системы если работа клиента прервалась из вне
 	bot.Logger.Infoln("Init proxy ...")
 	err := bot.InitProxy(true)
-
 	if err != nil {
 		bot.Logger.Errorf("PROXY ERROR %#v", err)
 		if err.Message == "BOT_UNKNOWN_PROXY_TYPE" {
@@ -146,7 +148,6 @@ func (bot *Bot) Start() *tdlib.Error {
 		bot.Stop()
 		return err
 	}
-
 	// получаем инфу об аккаунте
 	var me *user.User
 	if me, err = bot.GetMe(); err != nil || me.ID == 0 {
@@ -195,7 +196,6 @@ func (bot *Bot) Start() *tdlib.Error {
 		time.Unix(int64(bot.Profile.User.WasOnline), 0),
 		bot.Profile.User.Location,
 	)
-
 	state, e := bot.Client.GetAuthorizationState()
 	if e != nil {
 		return e.(*tdlib.Error)
@@ -207,7 +207,8 @@ func (bot *Bot) Start() *tdlib.Error {
 
 	bot.Status = StatusReady
 	bot.Profile.User.Status = user.StatusReady
-
+	ev := tdlib.NewEvent(tdlib.EventTypeResponse, EventNameBotReady, 0, "")
+	go bot.Client.PublishEvent(ev)
 	<-bot.StopWork
 	return nil
 
@@ -215,7 +216,8 @@ func (bot *Bot) Start() *tdlib.Error {
 
 // Stop ...
 func (bot *Bot) Stop() {
-	if bot.isDying() {
+	//if !bot.IsRun() {
+	if bot == nil || bot.Client == nil || bot.Status == StatusStopped || bot.Status == StatusStopping {
 		return
 	}
 	currentStatus := bot.Status
@@ -224,11 +226,12 @@ func (bot *Bot) Stop() {
 	bot.Profile.User.Status = user.StatusStopped
 	bot.destroyClient()
 	bot.Profile.Close()
+	bot.Status = StatusStopped
 	if currentStatus == StatusReady {
 		bot.StopWork <- true
 	}
 	bot.Logger.Infoln("Stopping finish")
-	bot.Status = StatusStopped
+
 }
 
 func (bot *Bot) Restart() {
@@ -247,18 +250,21 @@ func (bot *Bot) Restart() {
 	bot.Logger.Infoln("Restarting finish")
 }
 
-func (bot *Bot) isDying() bool {
-	if bot == nil || bot.Status == StatusStopped || bot.Status == StatusStopping || bot.Client == nil {
-		return true
+func (bot *Bot) IsRun() bool {
+	//if bot == nil || bot.Status == StatusStopped || bot.Status == StatusStopping || bot.Client == nil {
+	if bot == nil || bot.Status != StatusReady || bot.Client == nil {
+		return false
 	}
-	return false
+	return true
 }
 
 // Init proxy server
 func (bot *Bot) InitProxy(check bool) *tdlib.Error {
-	if bot.isDying() {
-		return tdlib.NewError(ErrorCodeSystem, "BOT_DYING", "")
-	}
+	/*
+		if !bot.IsRun() {
+			return tdlib.NewError(ErrorCodeSystem, "BOT_DONT_READY", "")
+		}
+	*/
 	/*
 		if !bot.isReady() {
 			return tdlib.NewError(ErrorSystem, "BOT_NOT_READY", "")
@@ -479,14 +485,19 @@ func (bot *Bot) AuthBot() *tdlib.Error {
 			}
 			_, err := bot.Client.SendAuthPassword(pass)
 			if err != nil {
-				bot.Logger.Errorf("Send password error %s\n", err.Error())
+				// TODO: Тест с возвращением ошибки, в рабочем варианте продолжал работать
+				return err.(*tdlib.Error)
+				/*
+					bot.Logger.Errorf("Send password error %s\n", err.Error())
+					continue
+				*/
 				//TEST!!!!
 				/*
 					if err.(*tdlib.Error).Code == tdlib.ErrorCodePassInvalid && bot.Profile.Config.APP.AuthPass != "" {
 						bot.Profile.Config.APP.AuthPass = ""
 					}
 				*/
-				continue
+
 			}
 
 		case tdlib.AuthorizationStateWaitRegistrationType:

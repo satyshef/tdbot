@@ -217,25 +217,17 @@ func (bot *Bot) ProfileRemovePhoto() *tdlib.Error {
 }
 
 func (b *Bot) ProfileToSpam() error {
-	if !b.isDying() {
-		b.Stop()
-	}
+	b.Stop()
 	return b.Profile.Move(b.Profile.BaseDir() + "spam")
 }
 
 func (b *Bot) ProfileToLogout() error {
-
-	if !b.isDying() {
-		b.Stop()
-	}
-
+	b.Stop()
 	return b.Profile.Move(b.Profile.BaseDir() + "logout")
 }
 
 func (b *Bot) ProfileToBan() error {
-	if !b.isDying() {
-		b.Stop()
-	}
+	b.Stop()
 	return b.Profile.Move(b.Profile.BaseDir() + "banned")
 }
 

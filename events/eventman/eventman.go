@@ -10,9 +10,12 @@ import (
 
 // Manager ....
 type Manager struct {
-	Store     *leveldb.Store
-	WatchList []string
+	Store      *leveldb.Store
+	WatchList  []string
+	IgnoreList []string
 }
+
+var ignoreList = []string{"botReady"}
 
 // Create new storage manager
 func New(path string, watchList []string) (*Manager, error) {
@@ -21,8 +24,9 @@ func New(path string, watchList []string) (*Manager, error) {
 		return nil, err
 	}
 	return &Manager{
-			Store:     store,
-			WatchList: watchList,
+			Store:      store,
+			WatchList:  watchList,
+			IgnoreList: ignoreList,
 		},
 		nil
 }
@@ -34,10 +38,15 @@ func (m *Manager) AddToWatch(evName ...string) {
 
 // Write сохранить событие в хранилище
 func (m *Manager) Write(ev *event.Event) error {
+	for _, name := range m.IgnoreList {
+		if name == ev.Name {
+			return nil
+		}
+	}
 	//если в списке нет значений значит пишем все события
 	if len(m.WatchList) == 0 {
 		if err := m.Store.Write(ev); err != nil {
-			return fmt.Errorf("Write Event Error: %s\n", err)
+			return fmt.Errorf("Write Event Error: %s\nEvent: %#v\n\n", err, ev)
 
 		}
 		return nil

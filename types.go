@@ -7,6 +7,7 @@ import (
 
 const (
 	EventNameSendMessageByPhone = "sendMessageByPhone"
+	EventNameBotReady           = "botReady"
 )
 
 type botStatus string
