@@ -215,19 +215,21 @@ func (bot *Bot) InviteByUserName(username, chatname string) *tdlib.Error {
 	if e != nil {
 		return e
 	}
-	bot.Logger.Infoln("Add user : ", username)
 
 	userChat, err := bot.Client.SearchPublicChat(username)
 	if err != nil {
-		return err.(*tdlib.Error)
+		e := err.(*tdlib.Error)
+		bot.Logger.Debugf("Invite user %s - %s", username, e.Message)
+		return e
 	}
 
 	_, err = bot.Client.AddChatMember(destChat.ID, userChat.ID, 100)
 	if err != nil {
-		bot.Logger.Error("%#v\n", err)
-		return err.(*tdlib.Error)
+		e := err.(*tdlib.Error)
+		bot.Logger.Debugf("Invite user %s - %s", username, e.Message)
+		return e
 	} else {
-		bot.Logger.Infoln("Add OK")
+		bot.Logger.Debugf("Invite user %s - OK", username)
 	}
 
 	return nil
