@@ -27,6 +27,7 @@ type (
 
 //New Инициализация бота
 func New(prof *profile.Profile) *Bot {
+
 	if prof == nil {
 		log.Fatal("Profile nil value")
 	}
@@ -111,7 +112,11 @@ func (bot *Bot) Start() *tdlib.Error {
 	}
 	bot.Logger.Infoln("Starting the bot ...")
 
-	bot.Profile.Reload()
+	//bot.Profile.Reload()
+
+	if err := bot.Profile.Reload(); err != nil {
+		return tdlib.NewError(profile.ErrorCodeNotInit, "PROFILE_NOT_INIT", err.Error())
+	}
 
 	bot.Status = StatusInit
 	bot.Profile.User.Status = user.StatusInitialization
@@ -143,37 +148,39 @@ func (bot *Bot) Start() *tdlib.Error {
 		bot.Stop()
 	}
 	// bot authorization
+	// TODO: тестовое отключение STOP
 	err = bot.AuthBot() //2
 	if err != nil {
-		bot.Stop()
+		//bot.Stop()
 		return err
 	}
 	// получаем инфу об аккаунте
 	var me *user.User
 	if me, err = bot.GetMe(); err != nil || me.ID == 0 {
-		bot.Stop()
+		//bot.Stop()
 		return err
 	}
 	// устанавливаем имя из конфигурации
-	if bot.Profile.Config.APP.FirstName != "" && bot.Profile.Config.APP.FirstName != me.FirstName {
-		if err := bot.SetName(bot.Profile.Config.APP.FirstName, ""); err != nil {
-			bot.Stop()
-			return err
-		}
+	//if bot.Profile.Config.APP.FirstName != "" && bot.Profile.Config.APP.FirstName != me.FirstName {
+	if err := bot.SetName(bot.Profile.Config.APP.FirstName, ""); err != nil {
+		//bot.Stop()
+		return err
 	}
+	//	}
+
 	// Устанавливаем пароль
 	if err := bot.SetPassword(bot.Profile.Config.APP.AuthPass, bot.Profile.Config.APP.HintPass); err != nil {
-		bot.Stop()
+		//bot.Stop()
 		return err
 	}
 	// Установить фото профиля
 	if err := bot.InitProfilePhoto(bot.Profile.Config.APP.Photo); err != nil {
-		bot.Stop()
+		//bot.Stop()
 		return err
 	}
 	// Параметры отображения номера телефона
 	if err := bot.SetPhoneMode(bot.Profile.Config.APP.ShowPhoneMode); err != nil {
-		bot.Stop()
+		//bot.Stop()
 		return err
 	}
 	// Установить статус online
@@ -184,7 +191,7 @@ func (bot *Bot) Start() *tdlib.Error {
 		_, e = bot.Client.SetOption("online", tdlib.NewOptionValueBoolean(false))
 	}
 	if e != nil {
-		bot.Stop()
+		//bot.Stop()
 		return err
 	}
 	fmt.Printf("\n	Phone : %s\n	UID : %d\n	FirstName : %s\n	LastName : %s\n	UserName : %s\n	WasOnline : %s\n	Location : %s\n\n",
@@ -225,21 +232,22 @@ func (bot *Bot) Stop() {
 	bot.Status = StatusStopping
 	bot.Profile.User.Status = user.StatusStopped
 	bot.destroyClient()
-	bot.Profile.Close()
 	bot.Status = StatusStopped
 	if currentStatus == StatusReady {
 		bot.StopWork <- true
 	}
+	//bot.Profile.Close()
 	bot.Logger.Infoln("Stopping finish")
 
 }
 
 func (bot *Bot) Restart() {
-	/*
-		if bot.Status == StatusRestart {
-			return
-		}
-	*/
+
+	if bot.Profile == nil {
+		bot.Logger.Debugln("Bot not restarted : profile not init")
+		return
+	}
+
 	bot.Logger.Infoln("Restarting the bot ...")
 	//	bot.Status = StatusRestart
 

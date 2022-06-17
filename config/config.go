@@ -42,9 +42,10 @@ type (
 		DontRebootInterval int32  `toml:"max_interval"`    // интервал при котором не происходит отключение профиля если сработал лимит
 		//CheckLimit         bool   `toml:"check_limit"`
 		SetOnline bool   `toml:"set_online"`
-		BannedDir string `toml:"banned_dir"`
-		LogoutDir string `toml:"logout_dir"`
-		FoulDir   string `toml:"foul_dir"`
+		DirBanned string `toml:"banned_dir"`
+		DirLogout string `toml:"logout_dir"`
+		DirFoul   string `toml:"foul_dir"`
+		DirDouble string `toml:"double_dir"`
 	}
 
 	Mimicry struct {
@@ -107,9 +108,10 @@ func New() *Config {
 			Hash:               "e782045df67ba48e441ccb105da8fc85",
 			SystemLanguageCode: "en",
 			DeviceModel:        "Web Client",
-			BannedDir:          "banned",
-			LogoutDir:          "logout",
-			FoulDir:            "foul",
+			DirBanned:          "",
+			DirLogout:          "",
+			DirFoul:            "",
+			DirDouble:          "",
 			Mode:               1,
 			DontRebootInterval: 10,
 		},

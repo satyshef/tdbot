@@ -1,6 +1,9 @@
 package tdbot
 
 import (
+	"strings"
+	"time"
+
 	"github.com/satyshef/tdbot/config"
 	"github.com/satyshef/tdbot/events/event"
 	"github.com/satyshef/tdbot/profile"
@@ -144,8 +147,10 @@ func (bot *Bot) GetMe() (*user.User, *tdlib.Error) {
 
 // SetName установить имя пользователя
 func (bot *Bot) SetName(firstname, lastname string) *tdlib.Error {
+	firstname = strings.Title(firstname)
+	lastname = strings.Title(lastname)
 	if bot.Profile.User.FirstName == firstname && bot.Profile.User.LastName == lastname {
-		bot.Logger.Infof("The name match")
+		//bot.Logger.Infof("The name match")
 		return nil
 	}
 
@@ -216,19 +221,84 @@ func (bot *Bot) ProfileRemovePhoto() *tdlib.Error {
 	return nil
 }
 
-func (b *Bot) ProfileToSpam() error {
+func (b *Bot) ProfileToSpam() *tdlib.Error {
+	if b.Profile.Config.APP.DirFoul == "" {
+		return tdlib.NewError(tdlib.ErrorCodeSystem, "Foul dir not set", "")
+	}
 	b.Stop()
-	return b.Profile.Move(b.Profile.BaseDir() + "spam")
+	var path string
+	if b.Profile.Config.APP.DirFoul[0:1] == "/" {
+		path = b.Profile.Config.APP.DirFoul
+	} else {
+		path = b.Profile.BaseDir() + b.Profile.Config.APP.DirFoul + "/" + time.Now().Format("2006-01-02")
+	}
+	err := b.Profile.Move(path)
+	if err != nil {
+		return tdlib.NewError(tdlib.ErrorCodeSystem, err.Error(), "")
+	}
+	b.Profile.Close()
+	b.Profile = nil
+	return nil
 }
 
 func (b *Bot) ProfileToLogout() error {
+	if b.Profile.Config.APP.DirLogout == "" {
+		return tdlib.NewError(tdlib.ErrorCodeSystem, "Logout dir not set", "")
+	}
 	b.Stop()
-	return b.Profile.Move(b.Profile.BaseDir() + "logout")
+	var path string
+	if b.Profile.Config.APP.DirLogout[0:1] == "/" {
+		path = b.Profile.Config.APP.DirLogout
+	} else {
+		path = b.Profile.BaseDir() + b.Profile.Config.APP.DirLogout + "/" + time.Now().Format("2006-01-02")
+	}
+	err := b.Profile.Move(path)
+	if err != nil {
+		return tdlib.NewError(tdlib.ErrorCodeSystem, err.Error(), "")
+	}
+	b.Profile.Close()
+	b.Profile = nil
+	return nil
 }
 
 func (b *Bot) ProfileToBan() error {
+	if b.Profile.Config.APP.DirBanned == "" {
+		return tdlib.NewError(tdlib.ErrorCodeSystem, "Ban dir not set", "")
+	}
 	b.Stop()
-	return b.Profile.Move(b.Profile.BaseDir() + "banned")
+	var path string
+	if b.Profile.Config.APP.DirBanned[0:1] == "/" {
+		path = b.Profile.Config.APP.DirBanned
+	} else {
+		path = b.Profile.BaseDir() + b.Profile.Config.APP.DirBanned + "/" + time.Now().Format("2006-01-02")
+	}
+	err := b.Profile.Move(path)
+	if err != nil {
+		return tdlib.NewError(tdlib.ErrorCodeSystem, err.Error(), "")
+	}
+	b.Profile.Close()
+	b.Profile = nil
+	return nil
+}
+
+func (b *Bot) ProfileToDouble() error {
+	if b.Profile.Config.APP.DirDouble == "" {
+		return tdlib.NewError(tdlib.ErrorCodeSystem, "Double dir not set", "")
+	}
+	b.Stop()
+	var path string
+	if b.Profile.Config.APP.DirDouble[0:1] == "/" {
+		path = b.Profile.Config.APP.DirDouble
+	} else {
+		path = b.Profile.BaseDir() + b.Profile.Config.APP.DirDouble + "/" + time.Now().Format("2006-01-02")
+	}
+	err := b.Profile.Move(path)
+	if err != nil {
+		return tdlib.NewError(tdlib.ErrorCodeSystem, err.Error(), "")
+	}
+	b.Profile.Close()
+	b.Profile = nil
+	return nil
 }
 
 // Проверяем лимиты события

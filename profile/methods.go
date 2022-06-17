@@ -39,22 +39,25 @@ func (p *Profile) Remove() error {
 }
 
 func (p *Profile) Close() error {
+	//fmt.Println("CLOSE PROFILE")
 	//Тест. Пробуем блокировку Level DB
 	//UnlockProfile(p.Location())
-	p.unlock()
 
-	/*
-			Тест
-		p.User = nil
-		p.Event = nil
-		p.Config = nil
-	*/
+	p.unlock()
+	//TODO:		Тест
+	p.Event.Store.Close()
+	//p = nil
+	//p.User = nil
+	//p.Event = nil
+	//p.Config = nil
+	time.Sleep(time.Second * 1)
 	return nil
 }
 
 // Перезагрузить профиль
 // @path - если указан, тогда профиль загружается по данному пути
 func (p *Profile) Reload() error {
+	p.Event.Store.Close()
 	newProf, err := Get(p.Location(), 0)
 	if err != nil {
 		return err

@@ -3,7 +3,6 @@ package tdbot
 import (
 	"fmt"
 	"math"
-	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -23,10 +22,12 @@ func (bot *Bot) SendMessageToGroup(name string, msg string) (int64, *tdlib.Error
 	if msg == "" {
 		return 0, tdlib.NewError(ErrorCodeWrongData, "BOT_WRONG_DATA", "Empty message content")
 	}
+
 	chat, err := bot.GetChat(name, true)
 	if err != nil {
 		return 0, err
 	}
+	//bot.Logger.Debugf("Chat %#v\n", chat)
 	/*
 		ft, _ := bot.Client.ParseMarkdown(tdlib.NewFormattedText(msg, nil))
 		inputMsgTxt := tdlib.NewInputMessageText(ft, true, false)
@@ -36,7 +37,10 @@ func (bot *Bot) SendMessageToGroup(name string, msg string) (int64, *tdlib.Error
 			return e.(*tdlib.Error)
 		}
 	*/
-	return bot.SendMessageByCID(chat.ID, msg)
+
+	mid, err := bot.SendMessageByCID(chat.ID, msg)
+	bot.Client.LeaveChat(chat.ID)
+	return mid, err
 	//bot.Logger.Debugf("Send to %s success\n", name)
 	//return nil
 }
@@ -789,23 +793,25 @@ func (bot *Bot) WaitMessageState(msg *tdlib.Message) *tdlib.Error {
 			break
 		}
 
-		//bot.Logger.Infof("State : %s\n", m.SendingState.GetMessageSendingStateEnum())
-
+		//Заблокирована отправка сообщений
 		if m.SendingState.GetMessageSendingStateEnum() == tdlib.MessageSendingStateFailedType {
-			//"messageSendingStateFailed" {
-			//bot.Logger.Errorln("Send Message ERROR : ", m.SendingState.GetMessageSendingStateEnum())
+			e := tdlib.NewError(tdlib.ErrorCodeFloodLock, "PEER_FLOOD", "User spam block")
+			ev := tdlib.ErrorToEvent(e)
+			bot.Client.PublishEvent(ev)
+			return e
 
-			//переносим аккаун в директорию unauthorized, она указывается относительно директории с профилем
-			//err := bot.Profile.Move(bot.Profile.BaseDir() + "spam")
-			err := bot.ProfileToSpam()
-			if err != nil {
-				bot.Logger.Error(err)
-				os.Exit(1)
-			}
+			//ev := tdlib.NewEvent(tdlib.EventTypeError, EventNameBotReady, 0, "")
+			/*
+				err := bot.ProfileToSpam()
+				if err != nil {
+					bot.Logger.Error(err)
+					os.Exit(1)
+				}
 
-			go bot.Restart()
+				go bot.Restart()
 
-			return tdlib.NewError(ErrorCodeSystem, "BOT_SYSTEM_ERROR", "Send Message ERROR : MessageSendingStateFailed")
+				return tdlib.NewError(ErrorCodeSystem, "BOT_SYSTEM_ERROR", "Send Message ERROR : MessageSendingStateFailed")
+			*/
 		}
 		//иначе сообщение в процессе отправки. Ждем 1 сек
 
@@ -857,7 +863,6 @@ func (bot *Bot) GetChat(chatname string, join bool) (*tdlib.Chat, *tdlib.Error) 
 			if err != nil {
 				return nil, err.(*tdlib.Error)
 			}
-
 		} else {
 			chat, err = bot.Client.GetChat(cid)
 			if err != nil {

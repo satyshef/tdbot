@@ -14,10 +14,12 @@ func (bot *Bot) eventCatcher(tdEvent *tdlib.SystemEvent) *tdlib.Error {
 	if tdEvent == nil {
 		return tdlib.NewError(tdlib.ErrorCodeSystem, "CLIENT_EMPTY_UPDATE", "Received an empty update to client")
 	}
+
 	if bot.Profile == nil {
 		go bot.Restart()
 		return tdlib.NewError(profile.ErrorCodeDirNotExists, "PROFILE_NOT_INIT", "Profile not init")
 	}
+
 	if bot.Client == nil {
 		return tdlib.NewError(tdlib.ErrorCodeNotInit, "CLIENT_NOT_INIT", "Client not init")
 	}
