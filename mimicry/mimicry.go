@@ -95,7 +95,7 @@ func (h *Human) MakeFriends(count int) ([]int64, error) {
 		//берем случайного бота
 		m := RandInt(0, int(members.TotalCount)-1)
 		//игнорируем себя
-		if h.Bot.Profile.User.ID == members.Members[m].UserID() {
+		if h.Bot.Profile.User.ID == members.Members[m].MemberID.GetID() {
 			continue
 		}
 		//игнорируем создателя и администратора
@@ -103,8 +103,8 @@ func (h *Human) MakeFriends(count int) ([]int64, error) {
 			continue
 		}
 		//fmt.Printf("MEMBER : %#v\n\n", members.Members[m])
-		h.Bot.AddContact(members.Members[m].UserID(), h.Bot.Profile.Config.Mimicry.FriendName, fmt.Sprintf("%d", members.Members[m].UserID))
-		result = append(result, members.Members[m].UserID())
+		h.Bot.AddContact(members.Members[m].MemberID.GetID(), h.Bot.Profile.Config.Mimicry.FriendName, fmt.Sprintf("%d", members.Members[m].MemberID.GetID()))
+		result = append(result, members.Members[m].MemberID.GetID())
 	}
 
 	return result, nil

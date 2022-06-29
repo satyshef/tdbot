@@ -8,6 +8,7 @@ import (
 const (
 	EventNameSendMessageByPhone = "sendMessageByPhone"
 	EventNameBotReady           = "botReady"
+	EventNameChatMemberLeft     = "chatMemberLeft"
 )
 
 type botStatus string
@@ -30,12 +31,13 @@ const (
 )
 
 const (
-	//коды ошибок данного модуля начинаются с 41
-	ErrorCodeSystem           = 411
-	ErrorCodeWrongData        = 412
-	ErrorCodeContactDuplicate = 413
-	ErrorCodeUserNotExists    = 414
-	ErrorCodeNotInit          = 415
+	ErrorCodeSystem           = 551
+	ErrorCodeWrongData        = 552
+	ErrorCodeContactDuplicate = 553
+	ErrorCodeUserNotExists    = 554
+	ErrorCodeUserExists       = 555
+	ErrorCodeNotInit          = 556
+	ErrorCodeChatMemberLeft   = 557
 )
 
 //ConvertUser конвертируем пользователя tdlib в собственную структуру

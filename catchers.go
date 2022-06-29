@@ -10,7 +10,7 @@ import (
 
 // обработчик событий Телеграм клиента
 func (bot *Bot) eventCatcher(tdEvent *tdlib.SystemEvent) *tdlib.Error {
-	//bot.Logger.Infof("NEW EVENT %s: %#v\n", eventType, update)
+	//bot.Logger.Infof("NEW EVENT : %#v\n", tdEvent)
 	if tdEvent == nil {
 		return tdlib.NewError(tdlib.ErrorCodeSystem, "CLIENT_EMPTY_UPDATE", "Received an empty update to client")
 	}
@@ -29,14 +29,34 @@ func (bot *Bot) eventCatcher(tdEvent *tdlib.SystemEvent) *tdlib.Error {
 		//go bot.Stop()
 		return tdlib.NewError(profile.ErrorCodeDirNotExists, "PROFILE_DIR_NOT_EXISTS", "Profile Dir Not Exists")
 	}
+
 	ev := event.New(string(tdEvent.Type), tdEvent.Name, tdEvent.Time, tdEvent.DataJSON())
-	if err := bot.CheckEventLimits(ev); err != nil {
-		return err
+
+	switch tdEvent.Type {
+	case tdlib.EventTypeRequest:
+		// если запрос то сначала проверяем лимиты затем пишим событие
+		if err := bot.CheckEventLimits(ev); err != nil {
+			return err
+		}
+		if err := bot.Profile.Event.Write(ev); err != nil && !strings.Contains(err.Error(), "Event not observed") {
+			bot.Logger.Errorln(err)
+			bot.Stop()
+			return tdlib.NewError(profile.ErrorCodeLimitExceeded, "PROFILE_EVENT_DONT_WRITE", err.Error())
+		}
+	case tdlib.EventTypeResponse,
+		tdlib.EventTypeError:
+		// если ответ или ошибка то сначала пишим событие а затем проверяем лимиты
+		err := bot.Profile.Event.Write(ev)
+		if err := bot.CheckEventLimits(ev); err != nil {
+			bot.Logger.Errorf("LIMIT %#v\n", err)
+			return nil
+		}
+		if err != nil && !strings.Contains(err.Error(), "Event not observed") {
+			bot.Logger.Errorln(err)
+			bot.Stop()
+			return tdlib.NewError(profile.ErrorCodeLimitExceeded, "PROFILE_EVENT_DONT_WRITE", err.Error())
+		}
 	}
-	if err := bot.Profile.Event.Write(ev); err != nil && !strings.Contains(err.Error(), "Event not observed") {
-		bot.Logger.Errorln(err)
-		bot.Stop()
-		return tdlib.NewError(profile.ErrorCodeLimitExceeded, "PROFILE_EVENT_DONT_WRITE", err.Error())
-	}
+
 	return nil
 }
