@@ -171,7 +171,13 @@ func (c *Config) Save(fileName string) error {
 	}
 
 	defer f.Close()
-
+	/*
+		//Делаем копию что бы не изменить основную структуру
+		var b Config
+		copier.Copy(&b, c)
+		b.APP.ID = ""
+		b.APP.Hash = ""
+	*/
 	if err := toml.NewEncoder(f).Encode(c); err != nil {
 		return fmt.Errorf("%s", err)
 	}
