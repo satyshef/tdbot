@@ -14,6 +14,15 @@ type Profile struct {
 	Event  *eventman.Manager
 }
 
+type Sort int
+
+const (
+	SORT_ALPHABET  Sort = 0
+	SORT_RANDOM    Sort = 1
+	SORT_TIME_ASC  Sort = 2
+	SORT_TIME_DESC Sort = 3
+)
+
 /*
 const (
 	EventTypeRequest  = "request"

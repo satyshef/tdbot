@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"runtime"
+	"sort"
 
 	"github.com/satyshef/tdbot/config"
 	"github.com/satyshef/tdbot/events/eventman"
@@ -128,6 +129,8 @@ func Get(dir string, mode config.Mode) (*Profile, error) {
 	if err != nil {
 		return nil, err
 	}
+	//Сохраняем конфигурацию для того чтобы зафиксировать время последнего доступа к профилю
+	prof.SaveConfig()
 	//блокируем профиль(Заглушка)
 	if err := prof.lock(); err != nil {
 		return nil, err
@@ -157,23 +160,108 @@ func IsProfile(path string) bool {
 }
 
 // Получить список профилей в директории
-func GetList(dir string, random bool) (result []string) {
+func GetList(dir string, srt Sort) (result []string) {
 	AddTail(&dir)
 	files, err := ioutil.ReadDir(dir)
 	if err != nil {
 		return result
 		//log.Fatal(err)
 	}
-	for _, file := range files {
-		if IsProfile(dir + file.Name()) {
-			result = append(result, file.Name())
+
+	switch srt {
+	case SORT_RANDOM:
+		for _, file := range files {
+			if IsProfile(dir + file.Name()) {
+				result = append(result, file.Name())
+			}
+		}
+		result = shuffleArray(result)
+	//сортеруем по времени использования профиля, на убывание
+	case SORT_TIME_DESC:
+		tmp_list := map[int64]string{}
+		for _, file := range files {
+			if IsProfile(dir + file.Name()) {
+				prof, err := os.Stat(dir + file.Name() + "/" + ProFile)
+				if err != nil {
+					continue
+				}
+				tmp_list[prof.ModTime().Unix()] = file.Name()
+
+			}
+		}
+		result = sortProfileTimeDESC(tmp_list)
+	//сортеруем по времени использования профиля, по возрастанию
+	case SORT_TIME_ASC:
+		tmp_list := map[int64]string{}
+		for _, file := range files {
+			if IsProfile(dir + file.Name()) {
+				prof, err := os.Stat(dir + file.Name() + "/" + ProFile)
+				if err != nil {
+					continue
+				}
+				tmp_list[prof.ModTime().Unix()] = file.Name()
+
+			}
+		}
+		result = sortProfileTimeASC(tmp_list)
+	// по умолчанию сортируем в алфавитном порядке
+	default:
+		for _, file := range files {
+			if IsProfile(dir + file.Name()) {
+				result = append(result, file.Name())
+			}
 		}
 	}
-	if random {
-		return shuffleArray(result)
-	}
-	return result
+	return
 }
+
+func sortProfileTimeDESC(m map[int64]string) (result []string) {
+
+	keys := make([]int64, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+	//sort.Sort(keys)
+	sort.Slice(keys, func(i, j int) bool { return keys[i] > keys[j] })
+	for _, k := range keys {
+		result = append(result, m[k])
+	}
+	return
+}
+
+func sortProfileTimeASC(m map[int64]string) (result []string) {
+	keys := make([]int64, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+	sort.Slice(keys, func(i, j int) bool { return keys[i] < keys[j] })
+	for _, k := range keys {
+		result = append(result, m[k])
+	}
+	return
+}
+
+/*
+// сортировка файлов профилей по времени последнего доступа
+func sortByTime(lst []string) []string {
+	if len(lst) == 0 {
+		return nil
+	}
+
+	var result map[int64]
+
+	for _, p := range lst {
+		AddTail(&p)
+		file, err := os.Stat(p + ProFile)
+		if err != nil {
+			continue
+		}
+
+
+	}
+
+}
+*/
 
 //============================= ПЕРЕСМОТРЕТЬ ==========================================
 /*

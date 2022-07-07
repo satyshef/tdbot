@@ -164,7 +164,7 @@ func (c *Config) Load(path string) error {
 //Save сохранить конфигурацию
 // @fileName - путь к файлу в который сохраняем
 func (c *Config) Save(fileName string) error {
-	fmt.Printf("Save configuration to %s\n", fileName)
+	//fmt.Printf("Save configuration to %s\n", fileName)
 	f, err := os.Create(fileName)
 	if err != nil {
 		return fmt.Errorf("%s", err)
