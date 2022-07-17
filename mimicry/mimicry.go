@@ -94,8 +94,9 @@ func (h *Human) MakeFriends(count int) ([]int64, error) {
 	for i := 0; i < count; i++ {
 		//берем случайного бота
 		m := RandInt(0, int(members.TotalCount)-1)
+		uid := members.Members[m].MemberID.(*tdlib.MessageSenderUser).UserID
 		//игнорируем себя
-		if h.Bot.Profile.User.ID == members.Members[m].MemberID.GetID() {
+		if h.Bot.Profile.User.ID == uid {
 			continue
 		}
 		//игнорируем создателя и администратора
@@ -103,8 +104,8 @@ func (h *Human) MakeFriends(count int) ([]int64, error) {
 			continue
 		}
 		//fmt.Printf("MEMBER : %#v\n\n", members.Members[m])
-		h.Bot.AddContact(members.Members[m].MemberID.GetID(), h.Bot.Profile.Config.Mimicry.FriendName, fmt.Sprintf("%d", members.Members[m].MemberID.GetID()))
-		result = append(result, members.Members[m].MemberID.GetID())
+		h.Bot.AddContact(uid, h.Bot.Profile.Config.Mimicry.FriendName, fmt.Sprintf("%d", uid))
+		result = append(result, uid)
 	}
 
 	return result, nil

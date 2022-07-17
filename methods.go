@@ -12,6 +12,120 @@ import (
 )
 
 // ============================ NEW METHODS ======================================================
+// Собрать все не прочитаные сообщения. Сообщение загружаются со всех чатов в которых состоит бот
+func (bot *Bot) GetNewMessagesAll(chatLimit int) ([]tdlib.Message, *tdlib.Error) {
+	var result []tdlib.Message
+	chats, err := bot.GetChatList(chatLimit)
+	if err != nil {
+		return nil, err
+	} else {
+		for _, c := range chats {
+			for c.UnreadCount != 0 {
+				msgs, err := bot.Client.GetChatHistory(c.ID, c.LastReadInboxMessageID, -99, 99, false)
+				history := msgs.Messages[:len(msgs.Messages)-1]
+				if err != nil {
+					bot.Logger.Errorln("Get chat history : ", err)
+					break
+				} else {
+					var ids []int64
+					// Помечаем сообщения как прочитаные
+					for _, m := range history {
+						var senderID int64
+						switch m.Sender.GetMessageSenderEnum() {
+						case tdlib.MessageSenderChatType:
+							senderID = m.Sender.(*tdlib.MessageSenderChat).ChatID
+						case tdlib.MessageSenderUserType:
+							senderID = m.Sender.(*tdlib.MessageSenderUser).UserID
+						}
+						if senderID == bot.Profile.User.ID {
+							continue
+						}
+						result = append(result, m)
+						ids = append(ids, m.ID)
+					}
+					_, err := bot.Client.ViewMessages(c.ID, 0, ids, true)
+					if err != nil {
+						bot.Logger.Errorln(err)
+					}
+					c, err = bot.Client.GetChat(c.ID)
+					if err != nil {
+						bot.Logger.Errorln(err)
+						time.Sleep(time.Second * 1)
+					}
+				}
+			}
+			time.Sleep(time.Second * 2)
+		}
+
+	}
+
+	return result, nil
+}
+
+// Собрать все не прочитаные сообщения. Сообщение загружаются со всех чатов в которых состоит бот
+// @chatLimit - максимальное количество обрабатываемых чатов
+// @msgLimit - максималькое количество сообщений. Максимум 100
+func (bot *Bot) GetNewMessages(chatLimit int, msgLimit int32) ([]tdlib.Message, *tdlib.Error) {
+	var result []tdlib.Message
+	var chatCount int
+	chats, err := bot.GetChatList(500)
+	//fmt.Println(len(chats))
+	//os.Exit(1)
+	if err != nil {
+		return nil, err
+	} else {
+		for _, c := range chats {
+			if c.UnreadCount == 0 {
+				continue
+			}
+			msgs, err := bot.Client.GetChatHistory(c.ID, c.LastReadInboxMessageID, -msgLimit, msgLimit, false)
+			if err != nil {
+				return nil, err.(*tdlib.Error)
+			}
+			if len(msgs.Messages) == 0 {
+				continue
+			}
+			history := msgs.Messages[:len(msgs.Messages)-1]
+			if err != nil {
+				bot.Logger.Errorln("Get chat history : ", err)
+				break
+			} else {
+				var ids []int64
+				// Помечаем сообщения как прочитаные
+				for _, m := range history {
+					var senderID int64
+					switch m.Sender.GetMessageSenderEnum() {
+					case tdlib.MessageSenderChatType:
+						senderID = m.Sender.(*tdlib.MessageSenderChat).ChatID
+					case tdlib.MessageSenderUserType:
+						senderID = m.Sender.(*tdlib.MessageSenderUser).UserID
+					}
+					if senderID == bot.Profile.User.ID {
+						continue
+					}
+					result = append(result, m)
+					ids = append(ids, m.ID)
+				}
+				_, err := bot.Client.ViewMessages(c.ID, 0, ids, true)
+				if err != nil {
+					bot.Logger.Errorln(err)
+				}
+				if err != nil {
+					bot.Logger.Errorln(err)
+				}
+				chatCount++
+			}
+
+			if chatCount >= chatLimit {
+				break
+			}
+		}
+
+	}
+
+	return result, nil
+}
+
 // SendMessageToGroup отправить сообщение в чат
 // @name - имя группы
 // @msg - текст сообщения
@@ -362,6 +476,26 @@ func (bot *Bot) GetUser(userID string) (*tdlib.User, *tdlib.Error) {
 	return u, nil
 }
 
+//Получить полную информацию о пользователе по его номеру телефона.
+// @uid - ID пользователя
+// @chatName - имя чата в которой находится пользователь
+func (bot *Bot) GetUserByPhone(phone string) (*tdlib.User, *tdlib.Error) {
+	if !bot.IsRun() {
+		return nil, tdlib.NewError(ErrorCodeWrongData, "BOT_SYSTEM_ERROR", "Bot dying")
+	}
+	//проверить существование пользователя
+	userID, importErr := bot.ImportContact(phone, phone, "")
+	// ErrorUserExists пользователь есть в контактах
+	if importErr != nil && importErr.Code != ErrorCodeContactDuplicate {
+		return nil, importErr
+	}
+	u, err := bot.Client.GetUser(userID)
+	if err != nil {
+		return nil, err.(*tdlib.Error)
+	}
+	return u, nil
+}
+
 // Отправить сообщение участникам группы
 func (bot *Bot) SendMessageChatMembers(chatAddr string, message string, offset int32, limit int32) ([]tdlib.ChatMember, *tdlib.Error) {
 
@@ -370,17 +504,18 @@ func (bot *Bot) SendMessageChatMembers(chatAddr string, message string, offset i
 
 	if len(members) > 0 {
 		for _, m := range members {
-			_, err := bot.SendMessageByUID(m.MemberID.GetID(), message, 0)
+			uid := m.MemberID.(*tdlib.MessageSenderUser).UserID
+			_, err := bot.SendMessageByUID(uid, message, 0)
 			time.Sleep(time.Second * 2)
 			if err != nil {
 				if err.Code == tdlib.ErrorCodeNoAccess {
-					bot.Logger.Errorf("%d - %s", m.MemberID.GetID(), err.Message)
+					bot.Logger.Errorf("%d - %s", uid, err.Message)
 					continue
 				}
 				return result, err
 			}
 			result = append(result, m)
-			bot.Logger.Printf("[ %s ] Send to user ID %d - OK\n", time.Now().Format(time.RFC3339), m.MemberID.GetID())
+			bot.Logger.Printf("[ %s ] Send to user ID %d - OK\n", time.Now().Format(time.RFC3339), uid)
 
 		}
 	}
@@ -451,7 +586,8 @@ func (bot *Bot) GetChatUsers(chatname string, offset int32, limit int32) (result
 		}
 
 		for _, m := range members {
-			user, e := bot.Client.GetUser(m.MemberID.GetID())
+			uid := m.MemberID.(*tdlib.MessageSenderUser).UserID
+			user, e := bot.Client.GetUser(uid)
 			if e != nil {
 				err = e.(*tdlib.Error)
 				bot.Logger.Error("Get User", err)
@@ -577,13 +713,13 @@ func (bot *Bot) CopyChatUsers(source, destination string, offset int32, limit in
 
 		// Добавляем участников в целевую группу
 		for _, m := range members {
-
+			uid := m.MemberID.(*tdlib.MessageSenderUser).UserID
 			// Исключаем себя
-			if bot.Profile.User.ID == m.MemberID.GetID() {
+			if bot.Profile.User.ID == uid {
 				continue
 			}
 
-			user, err := bot.Client.GetUser(m.MemberID.GetID())
+			user, err := bot.Client.GetUser(uid)
 			if err != nil {
 				bot.Logger.Errorln("Get User Error ", err)
 				continue
@@ -595,8 +731,8 @@ func (bot *Bot) CopyChatUsers(source, destination string, offset int32, limit in
 				continue
 			}
 
-			bot.Logger.Infoln("Add user ID", m.MemberID.GetID())
-			_, err = bot.Client.AddChatMember(destChat.ID, m.MemberID.GetID(), 100)
+			bot.Logger.Infoln("Add user ID", uid)
+			_, err = bot.Client.AddChatMember(destChat.ID, uid, 100)
 			if err != nil {
 				//Если заблокировали за флуд возвращаем результат
 				if err.(*tdlib.Error).Code == tdlib.ErrorCodeFloodLock {

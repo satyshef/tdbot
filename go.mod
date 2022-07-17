@@ -4,7 +4,7 @@ go 1.18
 
 // For local develop enable replace
 
-//replace github.com/satyshef/tdlib => ../tdlib
+replace github.com/satyshef/tdlib => ../tdlib
 
 require (
 	github.com/BurntSushi/toml v1.1.0
