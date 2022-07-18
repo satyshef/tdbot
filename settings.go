@@ -4,11 +4,12 @@ import (
 	"strings"
 	"time"
 
+	tdc "github.com/satyshef/go-tdlib/client"
+	"github.com/satyshef/go-tdlib/tdlib"
 	"github.com/satyshef/tdbot/config"
 	"github.com/satyshef/tdbot/events/event"
 	"github.com/satyshef/tdbot/profile"
 	"github.com/satyshef/tdbot/user"
-	"github.com/satyshef/tdlib"
 )
 
 // SendPhone ....
@@ -116,7 +117,7 @@ func (bot *Bot) SetPhoneMode(mode int) *tdlib.Error {
 	_, err := bot.Client.SetUserPrivacySettingRules(ps, tdlib.NewUserPrivacySettingRules([]tdlib.UserPrivacySettingRule{pr}))
 
 	if err != nil {
-		return tdlib.NewError(tdlib.ErrorCodeSystem, err.Error(), "")
+		return tdlib.NewError(tdc.ErrorCodeSystem, err.Error(), "")
 	} else {
 		bot.Logger.Infof("Установлены настройки отображения номера телефона : %s\n", pr.GetUserPrivacySettingRuleEnum())
 	}
@@ -173,14 +174,14 @@ func (bot *Bot) InitProfilePhoto(photo string) *tdlib.Error {
 		err := bot.ProfileRemovePhoto()
 		if err != nil {
 			//bot.Logger.Errorf("Не удалось удалить фото профиля : %s\n", err)
-			return tdlib.NewError(tdlib.ErrorCodeSystem, err.Error(), "")
+			return tdlib.NewError(tdc.ErrorCodeSystem, err.Error(), "")
 		} else {
 			bot.Logger.Infof("Delete photo success\n")
 		}
 	} else if photo != "" {
 		err := bot.ProfileSetPhoto(bot.Profile.Config.APP.Photo)
 		if err != nil {
-			return tdlib.NewError(tdlib.ErrorCodeSystem, err.Error(), "")
+			return tdlib.NewError(tdc.ErrorCodeSystem, err.Error(), "")
 		} else {
 			bot.Logger.Infof("Set profile photo %s success\n", bot.Profile.Config.APP.Photo)
 		}
@@ -207,11 +208,11 @@ func (bot *Bot) ProfileRemovePhoto() *tdlib.Error {
 	p, err := bot.Client.GetUserProfilePhotos(bot.Profile.User.ID, 0, 100)
 	if err != nil {
 		bot.Logger.Errorf("REMOVE PROFILE %#v", err)
-		return tdlib.NewError(tdlib.ErrorCodeSystem, err.Error(), "")
+		return tdlib.NewError(tdc.ErrorCodeSystem, err.Error(), "")
 		//return err.(*tdlib.Error)
 	} else {
 		for _, photo := range p.Photos {
-			_, err = bot.Client.DeleteProfilePhoto(photo.ID)
+			_, err = bot.Client.DeleteProfilePhoto(&photo.ID)
 			if err != nil {
 				return err.(*tdlib.Error)
 			}
@@ -223,7 +224,7 @@ func (bot *Bot) ProfileRemovePhoto() *tdlib.Error {
 
 func (b *Bot) ProfileToSpam() *tdlib.Error {
 	if b.Profile.Config.APP.DirFoul == "" {
-		return tdlib.NewError(tdlib.ErrorCodeSystem, "Foul dir not set", "")
+		return tdlib.NewError(tdc.ErrorCodeSystem, "Foul dir not set", "")
 	}
 	b.Stop()
 	var path string
@@ -234,7 +235,7 @@ func (b *Bot) ProfileToSpam() *tdlib.Error {
 	}
 	err := b.Profile.Move(path)
 	if err != nil {
-		return tdlib.NewError(tdlib.ErrorCodeSystem, err.Error(), "")
+		return tdlib.NewError(tdc.ErrorCodeSystem, err.Error(), "")
 	}
 	b.Profile.Close()
 	b.Profile = nil
@@ -243,7 +244,7 @@ func (b *Bot) ProfileToSpam() *tdlib.Error {
 
 func (b *Bot) ProfileToLogout() error {
 	if b.Profile.Config.APP.DirLogout == "" {
-		return tdlib.NewError(tdlib.ErrorCodeSystem, "Logout dir not set", "")
+		return tdlib.NewError(tdc.ErrorCodeSystem, "Logout dir not set", "")
 	}
 	b.Stop()
 	var path string
@@ -254,7 +255,7 @@ func (b *Bot) ProfileToLogout() error {
 	}
 	err := b.Profile.Move(path)
 	if err != nil {
-		return tdlib.NewError(tdlib.ErrorCodeSystem, err.Error(), "")
+		return tdlib.NewError(tdc.ErrorCodeSystem, err.Error(), "")
 	}
 	b.Profile.Close()
 	b.Profile = nil
@@ -263,7 +264,7 @@ func (b *Bot) ProfileToLogout() error {
 
 func (b *Bot) ProfileToBan() error {
 	if b.Profile.Config.APP.DirBanned == "" {
-		return tdlib.NewError(tdlib.ErrorCodeSystem, "Ban dir not set", "")
+		return tdlib.NewError(tdc.ErrorCodeSystem, "Ban dir not set", "")
 	}
 	b.Stop()
 	var path string
@@ -274,7 +275,7 @@ func (b *Bot) ProfileToBan() error {
 	}
 	err := b.Profile.Move(path)
 	if err != nil {
-		return tdlib.NewError(tdlib.ErrorCodeSystem, err.Error(), "")
+		return tdlib.NewError(tdc.ErrorCodeSystem, err.Error(), "")
 	}
 	b.Profile.Close()
 	b.Profile = nil
@@ -283,7 +284,7 @@ func (b *Bot) ProfileToBan() error {
 
 func (b *Bot) ProfileToDouble() error {
 	if b.Profile.Config.APP.DirDouble == "" {
-		return tdlib.NewError(tdlib.ErrorCodeSystem, "Double dir not set", "")
+		return tdlib.NewError(tdc.ErrorCodeSystem, "Double dir not set", "")
 	}
 	b.Stop()
 	var path string
@@ -294,7 +295,7 @@ func (b *Bot) ProfileToDouble() error {
 	}
 	err := b.Profile.Move(path)
 	if err != nil {
-		return tdlib.NewError(tdlib.ErrorCodeSystem, err.Error(), "")
+		return tdlib.NewError(tdc.ErrorCodeSystem, err.Error(), "")
 	}
 	b.Profile.Close()
 	b.Profile = nil

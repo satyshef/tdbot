@@ -2,18 +2,18 @@ package tdbot
 
 import (
 	"fmt"
-	"math"
 	"strconv"
 	"strings"
 	"time"
 
+	tdc "github.com/satyshef/go-tdlib/client"
+	"github.com/satyshef/go-tdlib/tdlib"
 	"github.com/satyshef/tdbot/chat"
-	"github.com/satyshef/tdlib"
 )
 
 // ============================ NEW METHODS ======================================================
 // Собрать все не прочитаные сообщения. Сообщение загружаются со всех чатов в которых состоит бот
-func (bot *Bot) GetNewMessagesAll(chatLimit int) ([]tdlib.Message, *tdlib.Error) {
+func (bot *Bot) GetNewMessagesAll(chatLimit int32) ([]tdlib.Message, *tdlib.Error) {
 	var result []tdlib.Message
 	chats, err := bot.GetChatList(chatLimit)
 	if err != nil {
@@ -210,7 +210,7 @@ func (bot *Bot) CreateChannel(name, address, description string) (*tdlib.Chat, *
 	// Если указан адрес тогда проверяем существование такого чата
 	if address != "" {
 		chat, err := bot.GetChat(address, false)
-		if err != nil && err.Code != tdlib.ErrorCodeUsernameNotOccupied {
+		if err != nil && err.Code != tdc.ErrorCodeUsernameNotOccupied {
 			return nil, err
 
 		}
@@ -218,7 +218,7 @@ func (bot *Bot) CreateChannel(name, address, description string) (*tdlib.Chat, *
 			return nil, tdlib.NewError(ErrorCodeUserExists, "USERNAME_IS_EXISTS", "Username is exists")
 		}
 	}
-	chat, err := bot.Client.CreateNewSupergroupChat(name, true, description, nil)
+	chat, err := bot.Client.CreateNewSupergroupChat(name, true, description, nil, false)
 	if err != nil {
 		return nil, err.(*tdlib.Error)
 	}
@@ -450,7 +450,7 @@ func (bot *Bot) InviteByID(uid, cid int64) *tdlib.Error {
 	}
 	if m.Status.GetChatMemberStatusEnum() == tdlib.ChatMemberStatusLeftType {
 		// вводим новое событие
-		ev := tdlib.NewEvent(tdlib.EventTypeResponse, EventNameChatMemberLeft, 0, "")
+		ev := tdc.NewEvent(tdc.EventTypeResponse, EventNameChatMemberLeft, 0, "")
 		bot.Client.PublishEvent(ev)
 		return tdlib.NewError(ErrorCodeChatMemberLeft, "CHAT_MEMBER_LEFT", "Telegram auto remove member from chat")
 	}
@@ -508,7 +508,7 @@ func (bot *Bot) SendMessageChatMembers(chatAddr string, message string, offset i
 			_, err := bot.SendMessageByUID(uid, message, 0)
 			time.Sleep(time.Second * 2)
 			if err != nil {
-				if err.Code == tdlib.ErrorCodeNoAccess {
+				if err.Code == tdc.ErrorCodeNoAccess {
 					bot.Logger.Errorf("%d - %s", uid, err.Message)
 					continue
 				}
@@ -661,7 +661,7 @@ func (bot *Bot) GetChatMembers(chatname string, offset int32, limit int32) ([]td
 			len := int32(len(m.Members))
 			//если в ответе 0 members значит телеграм заблокировал запросы
 			if len == 0 {
-				return result, tdlib.NewError(tdlib.ErrorCodeAborted, "CLIENT_PARSING_ABORTED", "Request GetSupergroupMembers blocked")
+				return result, tdlib.NewError(tdc.ErrorCodeAborted, "CLIENT_PARSING_ABORTED", "Request GetSupergroupMembers blocked")
 			}
 
 			result = append(result, m.Members...)
@@ -678,10 +678,10 @@ func (bot *Bot) GetChatMembers(chatname string, offset int32, limit int32) ([]td
 			return nil, err.(*tdlib.Error)
 		}
 		if len(m.Members) == 0 {
-			return nil, tdlib.NewError(tdlib.ErrorCodeAborted, "BOT_WRONG_DATA", "No members in the chat")
+			return nil, tdlib.NewError(tdc.ErrorCodeAborted, "BOT_WRONG_DATA", "No members in the chat")
 		}
 		if offset > int32(len(m.Members)) {
-			return nil, tdlib.NewError(tdlib.ErrorCodeAborted, "BOT_WRONG_DATA", "Offset must be less than the chat members")
+			return nil, tdlib.NewError(tdc.ErrorCodeAborted, "BOT_WRONG_DATA", "Offset must be less than the chat members")
 		}
 		if limit == 0 {
 			limit = int32(len(m.Members)) - offset
@@ -735,7 +735,7 @@ func (bot *Bot) CopyChatUsers(source, destination string, offset int32, limit in
 			_, err = bot.Client.AddChatMember(destChat.ID, uid, 100)
 			if err != nil {
 				//Если заблокировали за флуд возвращаем результат
-				if err.(*tdlib.Error).Code == tdlib.ErrorCodeFloodLock {
+				if err.(*tdlib.Error).Code == tdc.ErrorCodeFloodLock {
 					return result, err.(*tdlib.Error)
 				}
 				bot.Logger.Error("AddChatMember", err)
@@ -830,7 +830,7 @@ func (bot *Bot) SendMessageByPhone(phone, msg string, ontime int32) (int64, *tdl
 		return 0, tdlib.NewError(ErrorCodeWrongData, "BOT_SYSTEM_ERROR", "Bot dying")
 	}
 	// вводим новое событие для пары ImportContacts и SendMessage
-	ev := tdlib.NewEvent(tdlib.EventTypeResponse, EventNameSendMessageByPhone, 0, "")
+	ev := tdc.NewEvent(tdc.EventTypeResponse, EventNameSendMessageByPhone, 0, "")
 	//проверить существование пользователя
 	uid, importErr := bot.ImportContact(phone, phone, "")
 	// ErrorUserExists пользователь есть в контактах
@@ -969,8 +969,8 @@ func (bot *Bot) WaitMessageState(msg *tdlib.Message) *tdlib.Error {
 
 		//Заблокирована отправка сообщений
 		if m.SendingState.GetMessageSendingStateEnum() == tdlib.MessageSendingStateFailedType {
-			e := tdlib.NewError(tdlib.ErrorCodeFloodLock, "PEER_FLOOD", "User spam block")
-			ev := tdlib.ErrorToEvent(e)
+			e := tdlib.NewError(tdc.ErrorCodeFloodLock, "PEER_FLOOD", "User spam block")
+			ev := tdc.ErrorToEvent(e)
 			bot.Client.PublishEvent(ev)
 			return e
 
@@ -1141,7 +1141,7 @@ func (bot *Bot) GetCreatedGroups() ([]*tdlib.Chat, *tdlib.Error) {
 }
 
 //GetChatList загрузить список чатов аккаунта
-func (bot *Bot) GetChatList(limit int) ([]*tdlib.Chat, *tdlib.Error) {
+func (bot *Bot) GetChatList(limit int32) ([]*tdlib.Chat, *tdlib.Error) {
 	var allChats []*tdlib.Chat
 	var haveFullChatList bool
 	err := bot.getChatList(limit, &allChats, &haveFullChatList)
@@ -1149,6 +1149,29 @@ func (bot *Bot) GetChatList(limit int) ([]*tdlib.Chat, *tdlib.Error) {
 	return allChats, err
 }
 
+// TODO: проверить загружает ли все чаты
+func (bot *Bot) getChatList(limit int32, allChats *[]*tdlib.Chat, haveFullChatList *bool) *tdlib.Error {
+	if !bot.IsRun() {
+		return tdlib.NewError(ErrorCodeWrongData, "BOT_SYSTEM_ERROR", "Bot dying")
+	}
+	chats, err := bot.Client.GetChats(nil, limit)
+	if err != nil {
+		return err.(*tdlib.Error)
+	}
+
+	for _, chatID := range chats.ChatIDs {
+		// get chat info from tdlib
+		chat, err := bot.Client.GetChat(chatID)
+		if err == nil {
+			*allChats = append(*allChats, chat)
+		} else {
+			return err.(*tdlib.Error)
+		}
+	}
+	return nil
+}
+
+/*
 func (bot *Bot) getChatList(limit int, allChats *[]*tdlib.Chat, haveFullChatList *bool) *tdlib.Error {
 	if !bot.IsRun() {
 		return tdlib.NewError(ErrorCodeWrongData, "BOT_SYSTEM_ERROR", "Bot dying")
@@ -1196,3 +1219,4 @@ func (bot *Bot) getChatList(limit int, allChats *[]*tdlib.Chat, haveFullChatList
 	}
 	return nil
 }
+*/

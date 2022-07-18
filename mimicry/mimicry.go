@@ -3,9 +3,9 @@ package mimicry
 import (
 	"fmt"
 
+	"github.com/satyshef/go-tdlib/tdlib"
 	"github.com/satyshef/tdbot"
 	"github.com/satyshef/tdbot/user"
-	"github.com/satyshef/tdlib"
 
 	"github.com/sirupsen/logrus"
 )

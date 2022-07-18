@@ -6,16 +6,17 @@ import (
 
 	"time"
 
+	tdc "github.com/satyshef/go-tdlib/client"
+	"github.com/satyshef/go-tdlib/tdlib"
 	"github.com/satyshef/tdbot/config"
 	"github.com/satyshef/tdbot/profile"
 	"github.com/satyshef/tdbot/user"
-	"github.com/satyshef/tdlib"
 	"github.com/sirupsen/logrus"
 )
 
 type (
 	Bot struct {
-		Client    *tdlib.Client
+		Client    *tdc.Client
 		Logger    *logrus.Logger
 		Profile   *profile.Profile
 		Status    botStatus
@@ -53,12 +54,12 @@ func New(prof *profile.Profile) *Bot {
 }
 
 // инициализация ТГ клиента
-func initClient(prof *profile.Profile) *tdlib.Client {
+func initClient(prof *profile.Profile) *tdc.Client {
 
-	tdlib.SetLogVerbosityLevel(1)
-	tdlib.SetFilePath(prof.Location() + "client.log")
-	c := tdlib.NewClient(
-		tdlib.Config{
+	tdc.SetLogVerbosityLevel(1)
+	tdc.SetFilePath(prof.Location() + "client.log")
+	c := tdc.NewClient(
+		tdc.Config{
 			APIID:                  prof.Config.APP.ID,
 			APIHash:                prof.Config.APP.Hash,
 			SystemLanguageCode:     prof.Config.APP.SystemLanguageCode,
@@ -214,7 +215,7 @@ func (bot *Bot) Start() *tdlib.Error {
 
 	bot.Status = StatusReady
 	bot.Profile.User.Status = user.StatusReady
-	ev := tdlib.NewEvent(tdlib.EventTypeResponse, EventNameBotReady, 0, "")
+	ev := tdc.NewEvent(tdc.EventTypeResponse, EventNameBotReady, 0, "")
 	go bot.Client.PublishEvent(ev)
 	<-bot.StopWork
 	return nil
@@ -386,7 +387,7 @@ func (bot *Bot) FindProxy(host string, port int32, proxyType tdlib.ProxyType) (*
 		}
 	}
 
-	return &tdlib.Proxy{}, tdlib.NewError(tdlib.ErrorCodeNotFound, "Proxy not found", "")
+	return &tdlib.Proxy{}, tdlib.NewError(tdc.ErrorCodeNotFound, "Proxy not found", "")
 }
 
 func (bot *Bot) RemoveAllProxy() *tdlib.Error {
@@ -412,7 +413,7 @@ func (bot *Bot) AuthBot() *tdlib.Error {
 
 	for {
 		if bot.Status == StatusStopped || bot.Status == StatusStopping {
-			return tdlib.NewError(tdlib.ErrorCodeAborted, "CLIENT_ABORTED", "Client authorization interrupted")
+			return tdlib.NewError(tdc.ErrorCodeAborted, "CLIENT_ABORTED", "Client authorization interrupted")
 		}
 
 		currentState, err := bot.Client.Authorize()
@@ -533,10 +534,10 @@ func (bot *Bot) AuthBot() *tdlib.Error {
 
 		case tdlib.AuthorizationStateLoggingOutType:
 			//bot.Profile.User.Status = user.StatusLogout
-			return tdlib.NewError(tdlib.ErrorCodeLogout, "CLIENT_LOGOUT", "Client logout")
+			return tdlib.NewError(tdc.ErrorCodeLogout, "CLIENT_LOGOUT", "Client logout")
 
 		case tdlib.AuthorizationStateClosedType:
-			return tdlib.NewError(tdlib.ErrorCodeSystem, "CLIENT_SYSTEM_ERROR", "Authorization State Closed")
+			return tdlib.NewError(tdc.ErrorCodeSystem, "CLIENT_SYSTEM_ERROR", "Authorization State Closed")
 
 		default:
 			fmt.Printf("Switch Default : %s\n", currentState.GetAuthorizationStateEnum())

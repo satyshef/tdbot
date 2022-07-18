@@ -1,8 +1,8 @@
 package tdbot
 
 import (
+	"github.com/satyshef/go-tdlib/tdlib"
 	"github.com/satyshef/tdbot/user"
-	"github.com/satyshef/tdlib"
 )
 
 const (
