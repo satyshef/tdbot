@@ -387,6 +387,56 @@ func (bot *Bot) InviteByUserName(username, chatname string) (int64, *tdlib.Error
 	return userChat.ID, nil
 }
 
+// инвайт по имени пользователя
+func (bot *Bot) InviteByName(name string, userID int64, chatNameSource, chatNameDest string) (int64, *tdlib.Error) {
+	if !bot.IsRun() {
+		return 0, tdlib.NewError(ErrorCodeWrongData, "BOT_SYSTEM_ERROR", "Bot dying")
+	}
+	sourceChat, e := bot.GetChat(chatNameSource, true)
+	if e != nil {
+		return 0, e
+	}
+	destChat, e := bot.GetChat(chatNameDest, true)
+	if e != nil {
+		return 0, e
+	}
+	var filter tdlib.ChatMembersFilter
+	members, err := bot.Client.SearchChatMembers(sourceChat.ID, name, 200, filter)
+	if err != nil {
+		e := err.(*tdlib.Error)
+		bot.Logger.Debugf("Search user %s - %s", name, e.Message)
+		return 0, e
+	}
+	var uid int64
+	for _, m := range members.Members {
+
+		if m.MemberID.(*tdlib.MessageSenderUser).UserID == userID {
+			uid = userID
+			break
+		}
+	}
+
+	if uid == 0 {
+		bot.Logger.Debugf("User %s not found", name)
+		return 0, tdlib.NewError(tdc.ErrorCodeMemberNotFound, "CLIENT_MEMBER_NOT_FOUND", "")
+	}
+
+	_, err = bot.Client.AddChatMember(destChat.ID, uid, 100)
+	if err != nil {
+		e := err.(*tdlib.Error)
+		bot.Logger.Debugf("Invite user %s - %s", name, e.Message)
+		return 0, e
+	}
+
+	// Проверяем добавился ли пользователь
+	e = bot.CheckMember(destChat.ID, uid, 1)
+	if e != nil {
+		return 0, e
+	}
+	bot.Logger.Debugf("Invite user %s - OK", name)
+	return uid, nil
+}
+
 func (bot *Bot) InviteByUserPhone(phone, chatname string) (int64, *tdlib.Error) {
 	if !bot.IsRun() {
 		return 0, tdlib.NewError(ErrorCodeWrongData, "BOT_SYSTEM_ERROR", "Bot dying")
@@ -427,7 +477,7 @@ func (bot *Bot) InviteByID(uid, cid int64) *tdlib.Error {
 			return e
 		}
 	*/
-	bot.Logger.Debugln("Add user : ", uid)
+	//bot.Logger.Debugln("Add user : ", uid)
 	/*
 		userChat, err := bot.Client.SearchPublicChat(userchat)
 		if err != nil {
@@ -437,15 +487,26 @@ func (bot *Bot) InviteByID(uid, cid int64) *tdlib.Error {
 
 	_, err := bot.Client.AddChatMember(cid, uid, 100)
 	if err != nil {
-		bot.Logger.Errorf("%#v\n", err)
+		//bot.Logger.Errorf("%#v\n", err)
 		return err.(*tdlib.Error)
 	}
-	// Проверяем добавился ли пользователь, если нет генерируем ошибку
-	time.Sleep(time.Millisecond * 100)
+	// Проверяем добавился ли пользователь
+	e := bot.CheckMember(cid, uid, 1)
+	if e != nil {
+		return e
+	}
+	bot.Logger.Debugf("Invite user %d - %s", uid, "OK")
+	//bot.Logger.Info(" - OK")
+	return nil
+}
+
+// Проверяем добавился ли пользователь в группу
+func (bot *Bot) CheckMember(cid, uid, timeout int64) *tdlib.Error {
+	time.Sleep(time.Millisecond * time.Duration(timeout))
 	member := tdlib.NewMessageSenderUser(uid)
 	m, err := bot.Client.GetChatMember(cid, member)
 	if err != nil {
-		bot.Logger.Errorf("%#v\n", err)
+		//bot.Logger.Errorf("%#v\n", err)
 		return err.(*tdlib.Error)
 	}
 	if m.Status.GetChatMemberStatusEnum() == tdlib.ChatMemberStatusLeftType {
@@ -454,7 +515,7 @@ func (bot *Bot) InviteByID(uid, cid int64) *tdlib.Error {
 		bot.Client.PublishEvent(ev)
 		return tdlib.NewError(ErrorCodeChatMemberLeft, "CHAT_MEMBER_LEFT", "Telegram auto remove member from chat")
 	}
-	bot.Logger.Info(" - OK")
+
 	return nil
 }
 
@@ -625,7 +686,8 @@ func (bot *Bot) GetChatMembers(chatname string, offset int32, limit int32) ([]td
 	var chat *tdlib.Chat
 	var err error
 	var result []tdlib.ChatMember
-	chat, e := bot.GetChat(chatname, false)
+	//TODO: плохая идея оставаться в чате
+	chat, e := bot.GetChat(chatname, true)
 	if e != nil {
 		return nil, e
 	}
@@ -697,7 +759,7 @@ func (bot *Bot) GetChatMembers(chatname string, offset int32, limit int32) ([]td
 }
 
 // Скопировать участников одной группы в другую
-func (bot *Bot) CopyChatUsers(source, destination string, offset int32, limit int32) ([]tdlib.ChatMember, *tdlib.Error) {
+func (bot *Bot) CopyGroupMembers(source, destination string, offset int32, limit int32) ([]tdlib.ChatMember, *tdlib.Error) {
 	if !bot.IsRun() {
 		return nil, tdlib.NewError(ErrorCodeWrongData, "BOT_SYSTEM_ERROR", "Bot dying")
 	}

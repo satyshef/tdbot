@@ -8,6 +8,7 @@ import (
 	"os"
 	"runtime"
 	"sort"
+	"syscall"
 
 	"github.com/satyshef/tdbot/config"
 	"github.com/satyshef/tdbot/events/eventman"
@@ -119,18 +120,30 @@ func Get(dir string, mode config.Mode) (*Profile, error) {
 	if !IsProfile(dir) {
 		return nil, fmt.Errorf("%s does not profile", dir)
 	}
+	conf := config.New()
+	conf.Load(dir + ProFile)
+	//test
+	/*
+		info, err := os.Stat(dir + ProFile)
+		if os.IsNotExist(err) {
+			return nil, fmt.Errorf("%s does not exist", dir)
+		}
+		fmt.Printf("A %#v\n", info.Sys().(*syscall.Stat_t).Atim.Nano())
+		os.Exit(1)
+	*/
+	//-------------------------
+
 	phoneNumber, err := GetPhoneNumberFromPath(dir)
 	if err != nil {
 		return nil, err
 	}
-	conf := config.New()
-	conf.Load(dir + ProFile)
 	prof, err := new(phoneNumber, dir, conf)
 	if err != nil {
 		return nil, err
 	}
 	//Сохраняем конфигурацию для того чтобы зафиксировать время последнего доступа к профилю
-	prof.SaveConfig()
+	//prof.SaveConfig()
+
 	//блокируем профиль(Заглушка)
 	if err := prof.lock(); err != nil {
 		return nil, err
@@ -185,8 +198,8 @@ func GetList(dir string, srt Sort) (result []string) {
 				if err != nil {
 					continue
 				}
-				tmp_list[prof.ModTime().Unix()] = file.Name()
-
+				tim := prof.Sys().(*syscall.Stat_t).Atim.Nano()
+				tmp_list[tim] = file.Name()
 			}
 		}
 		result = sortProfileTimeDESC(tmp_list)
@@ -199,8 +212,9 @@ func GetList(dir string, srt Sort) (result []string) {
 				if err != nil {
 					continue
 				}
-				tmp_list[prof.ModTime().Unix()] = file.Name()
-
+				//tim:=prof.ModTime().Unix()
+				tim := prof.Sys().(*syscall.Stat_t).Atim.Nano()
+				tmp_list[tim] = file.Name()
 			}
 		}
 		result = sortProfileTimeASC(tmp_list)

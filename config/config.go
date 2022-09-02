@@ -157,6 +157,17 @@ func (c *Config) Find(fileName string, confPaths ...string) (string, error) {
 // Load загрузить конфигурацию из файла
 func (c *Config) Load(path string) error {
 	_, err := toml.DecodeFile(path, c)
+	if err != nil {
+		return err
+	}
+
+	curtime := time.Now().Local()
+
+	//модифицируем время доступа к файлу для фиксации времени последнего использования профиля(используем для определения порядка загрузки профилей)
+	err = os.Chtimes(path, curtime, curtime)
+	if err != nil {
+		return err
+	}
 	c.prepare()
 	return err
 }
@@ -171,6 +182,7 @@ func (c *Config) Save(fileName string) error {
 	}
 
 	defer f.Close()
+
 	/*
 		//Делаем копию что бы не изменить основную структуру
 		var b Config

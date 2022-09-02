@@ -155,6 +155,10 @@ func (bot *Bot) Start() *tdlib.Error {
 		//bot.Stop()
 		return err
 	}
+
+	//TODO: получаем список чатов. Используем для смены паттерна поведения
+	bot.GetChatList(20)
+
 	// получаем инфу об аккаунте
 	var me *user.User
 	if me, err = bot.GetMe(); err != nil || me.ID == 0 {
