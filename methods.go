@@ -387,16 +387,59 @@ func (bot *Bot) InviteByUserName(username, chatname string) (int64, *tdlib.Error
 	return userChat.ID, nil
 }
 
+func (bot *Bot) InviteByUserNameTest(username, chatname string) (int64, *tdlib.Error) {
+	if !bot.IsRun() {
+		return 0, tdlib.NewError(ErrorCodeWrongData, "BOT_SYSTEM_ERROR", "Bot dying")
+	}
+
+	users, err := bot.Client.SearchContacts(username, 10)
+	if err != nil {
+		e := err.(*tdlib.Error)
+		bot.Logger.Debugf("Invite user %s - %s", username, e.Message)
+		return 0, e
+	}
+
+	var userID int64
+
+	if users.TotalCount == 0 {
+		userChat, err := bot.Client.SearchPublicChat(username)
+		if err != nil {
+			e := err.(*tdlib.Error)
+			bot.Logger.Debugf("Invite user %s - %s", username, e.Message)
+			return 0, e
+		}
+		_, e := bot.AddContact(userChat.ID, username, "")
+		if e != nil {
+			return 0, e
+		}
+		userID = userChat.ID
+	} else {
+		userID = users.UserIDs[0]
+	}
+
+	destChat, e := bot.GetChat(chatname, true)
+	if e != nil {
+		return 0, e
+	}
+
+	_, err = bot.Client.AddChatMember(destChat.ID, userID, 100)
+	if err != nil {
+		e := err.(*tdlib.Error)
+		bot.Logger.Debugf("Invite user %s - %s", username, e.Message)
+		return 0, e
+	} else {
+		bot.Logger.Debugf("Invite user %s - OK", username)
+	}
+
+	return userID, nil
+}
+
 // инвайт по имени пользователя
 func (bot *Bot) InviteByName(name string, userID int64, chatNameSource, chatNameDest string) (int64, *tdlib.Error) {
 	if !bot.IsRun() {
 		return 0, tdlib.NewError(ErrorCodeWrongData, "BOT_SYSTEM_ERROR", "Bot dying")
 	}
 	sourceChat, e := bot.GetChat(chatNameSource, true)
-	if e != nil {
-		return 0, e
-	}
-	destChat, e := bot.GetChat(chatNameDest, true)
 	if e != nil {
 		return 0, e
 	}
@@ -419,6 +462,25 @@ func (bot *Bot) InviteByName(name string, userID int64, chatNameSource, chatName
 	if uid == 0 {
 		bot.Logger.Debugf("User %s not found", name)
 		return 0, tdlib.NewError(tdc.ErrorCodeMemberNotFound, "CLIENT_MEMBER_NOT_FOUND", "")
+	}
+
+	//TODO: test. added user to contact
+	/*
+		_, err = bot.Client.SearchContacts(name, 10)
+		if err != nil {
+			e := err.(*tdlib.Error)
+			bot.Logger.Debugf("Invite user %s - %s", name, e.Message)
+			return 0, e
+		}
+	*/
+	_, e = bot.AddContact(uid, name, "")
+	if e != nil {
+		return 0, e
+	}
+
+	destChat, e := bot.GetChat(chatNameDest, true)
+	if e != nil {
+		return 0, e
 	}
 
 	_, err = bot.Client.AddChatMember(destChat.ID, uid, 100)
@@ -526,10 +588,18 @@ func (bot *Bot) GetUser(userID string) (*tdlib.User, *tdlib.Error) {
 	if !bot.IsRun() {
 		return nil, tdlib.NewError(ErrorCodeWrongData, "BOT_SYSTEM_ERROR", "Bot dying")
 	}
+
 	chat, errTd := bot.GetChat(userID, false)
 	if errTd != nil {
 		return nil, errTd
 	}
+
+	//TODO: эксперемент. Не обязательный запрос
+	_, e := bot.AddContact(chat.ID, userID, "")
+	if e != nil {
+		return nil, e
+	}
+
 	u, err := bot.Client.GetUser(chat.ID)
 	if err != nil {
 		return nil, err.(*tdlib.Error)
@@ -867,7 +937,7 @@ func (bot *Bot) AddContact(uid int64, firstname, lastname string) (int64, *tdlib
 	contact.LastName = lastname
 	contact.UserID = uid
 
-	result, err := bot.Client.AddContact(&contact, false)
+	_, err := bot.Client.AddContact(&contact, false)
 	if err != nil {
 		return 0, err.(*tdlib.Error)
 	}
@@ -877,7 +947,7 @@ func (bot *Bot) AddContact(uid int64, firstname, lastname string) (int64, *tdlib
 		return 0, tdlib.NewError(ErrorCodeUserNotExists, "Error", err.Error())
 	}
 
-	bot.Logger.Debugf("Пользователь %d успешно добавлен : %#v\n", uid, result)
+	bot.Logger.Debugf("Пользователь %d успешно добавлен в контакты", uid)
 	return uid, nil
 }
 
