@@ -595,10 +595,12 @@ func (bot *Bot) GetUser(userID string) (*tdlib.User, *tdlib.Error) {
 	}
 
 	//TODO: эксперемент. Не обязательный запрос
-	_, e := bot.AddContact(chat.ID, userID, "")
-	if e != nil {
-		return nil, e
-	}
+	/*
+		_, e := bot.AddContact(chat.ID, userID, "")
+		if e != nil {
+			return nil, e
+		}
+	*/
 
 	u, err := bot.Client.GetUser(chat.ID)
 	if err != nil {
