@@ -384,6 +384,12 @@ func (bot *Bot) InviteByUserName(username, chatname string) (int64, *tdlib.Error
 		bot.Logger.Debugf("Invite user %s - OK", username)
 	}
 
+	// Проверяем добавился ли пользователь
+	e = bot.CheckMember(destChat.ID, userChat.ID, 1)
+	if e != nil {
+		return 0, e
+	}
+
 	return userChat.ID, nil
 }
 
@@ -523,6 +529,12 @@ func (bot *Bot) InviteByUserPhone(phone, chatname string) (int64, *tdlib.Error) 
 		return 0, err.(*tdlib.Error)
 	} else {
 		bot.Logger.Infoln("Add OK")
+	}
+
+	// Проверяем добавился ли пользователь
+	e = bot.CheckMember(destChat.ID, uid, 1)
+	if e != nil {
+		return 0, e
 	}
 
 	return uid, nil
