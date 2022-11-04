@@ -17,6 +17,7 @@ import (
 type (
 	//Config конфигурация бота
 	Config struct {
+		Version   string   `toml:"version"`
 		APP       *APP     `toml:"app"`
 		Limits    Limits   `toml:"limits"`
 		Watchlist []string `toml:"watch_list"`
@@ -38,14 +39,14 @@ type (
 		FirstName          string `toml:"first_name"`
 		Photo              string `toml:"photo"`
 		ShowPhoneMode      int    `toml:"show_phone_mode"` // 0 - без изменений, 1 - показывать, 2 - скрывать
-		Mode               Mode   `toml:"mode"`            // 1 - single mode (не проверять лимиты при старте) 2 - group mode(проверять)
-		DontRebootInterval int32  `toml:"max_interval"`    // интервал при котором не происходит отключение профиля если сработал лимит
-		//CheckLimit         bool   `toml:"check_limit"`
-		SetOnline bool   `toml:"set_online"`
-		DirBanned string `toml:"banned_dir"`
-		DirLogout string `toml:"logout_dir"`
-		DirFoul   string `toml:"foul_dir"`
-		DirDouble string `toml:"double_dir"`
+		//Mode               Mode   `toml:"mode"`            // 1 - single mode (не проверять лимиты при старте) 2 - group mode(проверять) НЕРАБОТАЕТ
+		DontRebootInterval int32  `toml:"max_interval"` // интервал при котором не происходит отключение профиля если сработал лимит
+		CheckLimits        bool   `toml:"check_limits"` // проверять лимиты
+		SetOnline          bool   `toml:"set_online"`
+		DirBanned          string `toml:"banned_dir"`
+		DirLogout          string `toml:"logout_dir"`
+		DirFoul            string `toml:"foul_dir"`
+		DirDouble          string `toml:"double_dir"`
 	}
 
 	Mimicry struct {
@@ -83,14 +84,14 @@ type (
 
 	ProxyType string
 
-	Mode int
+	LimitsMode int
 )
 
-// режим работы бота
+// правила проверки лимитов
 const (
-	ModeDefault         Mode = 0
-	ModeDontCheckLimits Mode = 1
-	ModeCheckLimits     Mode = 2
+	LimitsModeDefault         LimitsMode = -1 //как установлено в настройках профиля
+	LimitsModeDontCheckLimits LimitsMode = 0  //не проверять лимиты
+	LimitsModeCheckLimits     LimitsMode = 1  //проверять лимиты
 )
 
 const (
@@ -103,6 +104,7 @@ const (
 func New() *Config {
 
 	return &Config{
+		Version: "0.00",
 		APP: &APP{
 			ID:                 "187786",
 			Hash:               "e782045df67ba48e441ccb105da8fc85",
@@ -112,7 +114,8 @@ func New() *Config {
 			DirLogout:          "",
 			DirFoul:            "",
 			DirDouble:          "",
-			Mode:               1,
+			//Mode:               1,
+			CheckLimits:        true,
 			DontRebootInterval: 10,
 		},
 

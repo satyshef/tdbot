@@ -58,7 +58,7 @@ func (p *Profile) Close() error {
 // @path - если указан, тогда профиль загружается по данному пути
 func (p *Profile) Reload() error {
 	p.Event.Store.Close()
-	newProf, err := Get(p.Location(), 0)
+	newProf, err := Get(p.Location(), config.LimitsModeDefault)
 	if err != nil {
 		return err
 	}

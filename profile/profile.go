@@ -112,7 +112,7 @@ func New(phone, profileDir string, conf *config.Config) (prof *Profile, err erro
 // Открыть существующий профиль из указанной директории
 // @dir - путь к профилю
 // @mode - режим работы. 0 - взять из файла конфигурации, 1 - лимиты не проверять, 2 - лимиты проверять
-func Get(dir string, mode config.Mode) (*Profile, error) {
+func Get(dir string, limitsMode config.LimitsMode) (*Profile, error) {
 	AddTail(&dir)
 	if _, err := os.Stat(dir); os.IsNotExist(err) {
 		return nil, fmt.Errorf("%s does not exist", dir)
@@ -148,11 +148,19 @@ func Get(dir string, mode config.Mode) (*Profile, error) {
 	if err := prof.lock(); err != nil {
 		return nil, err
 	}
-	// устанавливаем режим работы
-	if mode == config.ModeDefault {
-		mode = prof.Config.APP.Mode
+
+	// устанавливаем режим проверки лимитов
+	var checkLimits bool
+	switch limitsMode {
+	case config.LimitsModeDontCheckLimits:
+		checkLimits = false
+	case config.LimitsModeCheckLimits:
+		checkLimits = true
+	default:
+		checkLimits = prof.Config.APP.CheckLimits
 	}
-	if mode == config.ModeCheckLimits {
+
+	if checkLimits {
 		//если у профиля ограничения по лимитам тогда игнорируем его
 		exLimits := prof.CheckAllLimits()
 		if exLimits != nil {
