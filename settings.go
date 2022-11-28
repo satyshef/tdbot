@@ -133,6 +133,10 @@ func (bot *Bot) GetMe() (*user.User, *tdlib.Error) {
 		return nil, err.(*tdlib.Error)
 	}
 
+	/*
+		fmt.Printf("%#v\n\n", l)
+		fmt.Printf("%#v\n\n", me)
+	*/
 	usr = ConvertUser(me)
 
 	//Страна бота
@@ -223,6 +227,9 @@ func (bot *Bot) ProfileRemovePhoto() *tdlib.Error {
 }
 
 func (b *Bot) ProfileToSpam() *tdlib.Error {
+	if !b.IsRun() {
+		return tdlib.NewError(tdc.ErrorCodeSystem, "BOT_IS_DOWN", "")
+	}
 	if b.Profile.Config.APP.DirFoul == "" {
 		return tdlib.NewError(tdc.ErrorCodeSystem, "Foul dir not set", "")
 	}
@@ -243,6 +250,13 @@ func (b *Bot) ProfileToSpam() *tdlib.Error {
 }
 
 func (b *Bot) ProfileToLogout() error {
+
+	/*
+		if !b.IsRun() {
+			return tdlib.NewError(tdc.ErrorCodeSystem, "BOT_IS_DOWN", "")
+		}
+	*/
+
 	if b.Profile.Config.APP.DirLogout == "" {
 		return tdlib.NewError(tdc.ErrorCodeSystem, "Logout dir not set", "")
 	}
@@ -263,6 +277,9 @@ func (b *Bot) ProfileToLogout() error {
 }
 
 func (b *Bot) ProfileToBan() error {
+	if !b.IsRun() {
+		return tdlib.NewError(tdc.ErrorCodeSystem, "BOT_IS_DOWN", "")
+	}
 	if b.Profile.Config.APP.DirBanned == "" {
 		return tdlib.NewError(tdc.ErrorCodeSystem, "Ban dir not set", "")
 	}
@@ -283,6 +300,9 @@ func (b *Bot) ProfileToBan() error {
 }
 
 func (b *Bot) ProfileToDouble() error {
+	if !b.IsRun() {
+		return tdlib.NewError(tdc.ErrorCodeSystem, "BOT_IS_DOWN", "")
+	}
 	if b.Profile.Config.APP.DirDouble == "" {
 		return tdlib.NewError(tdc.ErrorCodeSystem, "Double dir not set", "")
 	}
@@ -303,12 +323,13 @@ func (b *Bot) ProfileToDouble() error {
 }
 
 // Проверяем лимиты события
-func (bot *Bot) CheckEventLimits(evnt *event.Event) *tdlib.Error {
+func (bot *Bot) CheckEventLimits(evnt *event.Event, stop bool) *tdlib.Error {
 	//bot.Logger.Errorln("Check LImit ", eventType, eventName)
 	exLimits := bot.Profile.CheckLimit(evnt.Type, evnt.Name)
 	for _, limit := range exLimits {
 		//если до оканачания ограничений много времени тогда останавливаем бота
-		if limit.Interval > bot.Profile.Config.APP.DontRebootInterval {
+		//if limit.Interval > bot.Profile.Config.APP.DontRebootInterval && bot.Profile.Config.APP.Mode == 2 {
+		if stop && limit.Interval > bot.Profile.Config.APP.DontRebootInterval && bot.Profile.Config.APP.CheckLimits {
 			bot.Stop()
 		}
 		l := &config.Limits{evnt.Type: {evnt.Name: exLimits}}

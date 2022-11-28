@@ -11,6 +11,7 @@ import (
 
 // обработчик событий Телеграм клиента
 func (bot *Bot) eventCatcher(tdEvent *tdc.SystemEvent) *tdlib.Error {
+	//fmt.Println("+++Catcher tdbot : ", tdEvent.Name)
 	//bot.Logger.Infof("NEW EVENT : %#v\n", tdEvent)
 	if tdEvent == nil {
 		return tdlib.NewError(tdc.ErrorCodeSystem, "CLIENT_EMPTY_UPDATE", "Received an empty update to client")
@@ -36,7 +37,7 @@ func (bot *Bot) eventCatcher(tdEvent *tdc.SystemEvent) *tdlib.Error {
 	switch tdEvent.Type {
 	case tdc.EventTypeRequest:
 		// если запрос то сначала проверяем лимиты затем пишим событие
-		if err := bot.CheckEventLimits(ev); err != nil {
+		if err := bot.CheckEventLimits(ev, true); err != nil {
 			return err
 		}
 		if err := bot.Profile.Event.Write(ev); err != nil && !strings.Contains(err.Error(), "Event not observed") {
@@ -46,17 +47,22 @@ func (bot *Bot) eventCatcher(tdEvent *tdc.SystemEvent) *tdlib.Error {
 		}
 	case tdc.EventTypeResponse,
 		tdc.EventTypeError:
-		// если ответ или ошибка то сначала пишим событие а затем проверяем лимиты
+		//bot.Logger.Infof("NEW EVENT : %#v\n\n\n", tdEvent)
+		//fmt.Println("=======================================================================================")
+		// сначала пишем событие а затем проверяем лимиты
 		err := bot.Profile.Event.Write(ev)
-		if err := bot.CheckEventLimits(ev); err != nil {
-			bot.Logger.Errorf("LIMIT %#v\n", err)
-			return nil
-		}
 		if err != nil && !strings.Contains(err.Error(), "Event not observed") {
 			bot.Logger.Errorln(err)
 			bot.Stop()
 			return tdlib.NewError(profile.ErrorCodeLimitExceeded, "PROFILE_EVENT_DONT_WRITE", err.Error())
 		}
+
+		//Проверяем лимиты
+		if err := bot.CheckEventLimits(ev, true); err != nil {
+			bot.Logger.Errorf("LIMIT %#v\n", err.Message)
+			return nil
+		}
+
 	}
 
 	return nil
