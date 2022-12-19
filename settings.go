@@ -244,7 +244,7 @@ func (b *Bot) ProfileToSpam() *tdlib.Error {
 	if err != nil {
 		return tdlib.NewError(tdc.ErrorCodeSystem, err.Error(), "")
 	}
-	b.Profile.Close()
+	b.Profile.Close(1000)
 	b.Profile = nil
 	return nil
 }
@@ -271,7 +271,7 @@ func (b *Bot) ProfileToLogout() error {
 	if err != nil {
 		return tdlib.NewError(tdc.ErrorCodeSystem, err.Error(), "")
 	}
-	b.Profile.Close()
+	b.Profile.Close(1000)
 	b.Profile = nil
 	return nil
 }
@@ -294,7 +294,7 @@ func (b *Bot) ProfileToBan() error {
 	if err != nil {
 		return tdlib.NewError(tdc.ErrorCodeSystem, err.Error(), "")
 	}
-	b.Profile.Close()
+	b.Profile.Close(1000)
 	b.Profile = nil
 	return nil
 }
@@ -317,7 +317,7 @@ func (b *Bot) ProfileToDouble() error {
 	if err != nil {
 		return tdlib.NewError(tdc.ErrorCodeSystem, err.Error(), "")
 	}
-	b.Profile.Close()
+	b.Profile.Close(1000)
 	b.Profile = nil
 	return nil
 }

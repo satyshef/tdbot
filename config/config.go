@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/BurntSushi/toml"
+	"github.com/imdario/mergo"
 )
 
 type (
@@ -128,6 +129,7 @@ func New() *Config {
 	}
 }
 
+/*
 func Load(path string) (*Config, error) {
 	conf := New()
 	err := conf.Load(path)
@@ -136,16 +138,19 @@ func Load(path string) (*Config, error) {
 	}
 	return conf, nil
 }
+*/
 
+// TODO: не используем
 // Find ищет конфигурацию в директориях и загружает если находит
 // возвращает путь откуда была загружена конфигурация
 // @fileName - имя файла конфигурации
 // @confPath - список директорий где ищется файл конфигурации
+/*
 func (c *Config) Find(fileName string, confPaths ...string) (string, error) {
 
 	for _, path := range confPaths {
 		path += fileName
-		err := c.Load(path)
+		err := c.Load1(path)
 		if err == nil {
 			//fmt.Printf("Конфигурация загружена из %s... \n", path+fileName)
 			return path, nil
@@ -156,21 +161,49 @@ func (c *Config) Find(fileName string, confPaths ...string) (string, error) {
 
 	return "", fmt.Errorf("Файл конфигурации %s не найден", fileName)
 }
+*/
 
 // Load загрузить конфигурацию из файла
-func (c *Config) Load(path string) error {
-	_, err := toml.DecodeFile(path, c)
+// @paths - список файлов где хранится конфигурация. Конфигурация собирается из всех файлов. Приоритет файла с индексом 0 самый высокий. При наличии одинаковых полей, значения полей с низжшим приоритетом перезаписываются
+func (c *Config) Load(paths ...string) error {
+
+	// Собираем конфигурацию
+
+	/*
+		parts := strings.Split(path, "/")
+		// profiles ; ./profiles ; /profiles
+		for _, part := range parts {
+			fmt.Println(part)
+		}
+	*/
+	if len(paths) == 0 {
+		return fmt.Errorf("%s", "Configuration paths is empty")
+	}
+
+	mainFile := paths[0]
+	_, err := toml.DecodeFile(mainFile, c)
 	if err != nil {
 		return err
 	}
-
-	curtime := time.Now().Local()
 
 	//модифицируем время доступа к файлу для фиксации времени последнего использования профиля(используем для определения порядка загрузки профилей)
-	err = os.Chtimes(path, curtime, curtime)
+	curtime := time.Now().Local()
+	err = os.Chtimes(mainFile, curtime, curtime)
 	if err != nil {
 		return err
 	}
+
+	tmpConf := &Config{}
+	for _, path := range paths[1:] {
+		_, err := toml.DecodeFile(path, tmpConf)
+		if err != nil {
+			return err
+		}
+		if err := mergo.Merge(c, tmpConf); err != nil {
+			fmt.Printf("MERGE ERROR : %#v\n", err)
+		}
+	}
+
 	c.prepare()
 	return err
 }

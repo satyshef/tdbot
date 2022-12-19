@@ -13,6 +13,7 @@ import (
 func (bot *Bot) eventCatcher(tdEvent *tdc.SystemEvent) *tdlib.Error {
 	//fmt.Println("+++Catcher tdbot : ", tdEvent.Name)
 	//bot.Logger.Infof("NEW EVENT : %#v\n", tdEvent)
+
 	if tdEvent == nil {
 		return tdlib.NewError(tdc.ErrorCodeSystem, "CLIENT_EMPTY_UPDATE", "Received an empty update to client")
 	}
@@ -37,7 +38,7 @@ func (bot *Bot) eventCatcher(tdEvent *tdc.SystemEvent) *tdlib.Error {
 	switch tdEvent.Type {
 	case tdc.EventTypeRequest:
 		// если запрос то сначала проверяем лимиты затем пишим событие
-		if err := bot.CheckEventLimits(ev, true); err != nil {
+		if err := bot.CheckEventLimits(ev, bot.Profile.Config.APP.CheckLimits); err != nil {
 			return err
 		}
 		if err := bot.Profile.Event.Write(ev); err != nil && !strings.Contains(err.Error(), "Event not observed") {
@@ -58,7 +59,7 @@ func (bot *Bot) eventCatcher(tdEvent *tdc.SystemEvent) *tdlib.Error {
 		}
 
 		//Проверяем лимиты
-		if err := bot.CheckEventLimits(ev, true); err != nil {
+		if err := bot.CheckEventLimits(ev, bot.Profile.Config.APP.CheckLimits); err != nil {
 			bot.Logger.Errorf("LIMIT %#v\n", err.Message)
 			return nil
 		}

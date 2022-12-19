@@ -8,6 +8,7 @@ go 1.18
 
 require (
 	github.com/BurntSushi/toml v1.2.0
+	github.com/imdario/mergo v0.3.13
 	github.com/juju/fslock v0.0.0-20160525022230-4d5c94c67b4b
 	github.com/satyshef/go-tdlib v0.3.13
 	github.com/sirupsen/logrus v1.9.0

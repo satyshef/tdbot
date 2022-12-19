@@ -97,9 +97,11 @@ func initLog(c *config.Log) *logrus.Logger {
 	return l
 }
 
+/*
 func (bot *Bot) init() {
 
 }
+*/
 
 //Start запуск бота
 //

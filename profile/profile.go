@@ -6,8 +6,10 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"path/filepath"
 	"runtime"
 	"sort"
+	"strings"
 	"syscall"
 
 	"github.com/satyshef/tdbot/config"
@@ -109,6 +111,7 @@ func New(phone, profileDir string, conf *config.Config) (prof *Profile, err erro
 	return prof, err
 }
 
+// TODO: Навести порядок с параметром CheckLimits
 // Открыть существующий профиль из указанной директории
 // @dir - путь к профилю
 // @mode - режим работы. 0 - взять из файла конфигурации, 1 - лимиты не проверять, 2 - лимиты проверять
@@ -120,19 +123,13 @@ func Get(dir string, limitsMode config.LimitsMode) (*Profile, error) {
 	if !IsProfile(dir) {
 		return nil, fmt.Errorf("%s does not profile", dir)
 	}
-	conf := config.New()
-	conf.Load(dir + ProFile)
-	//test
-	/*
-		info, err := os.Stat(dir + ProFile)
-		if os.IsNotExist(err) {
-			return nil, fmt.Errorf("%s does not exist", dir)
-		}
-		fmt.Printf("A %#v\n", info.Sys().(*syscall.Stat_t).Atim.Nano())
-		os.Exit(1)
-	*/
-	//-------------------------
 
+	conf := config.New()
+	paths := GetConfigFiles(dir)
+	err := conf.Load(paths...)
+	if err != nil {
+		return nil, err
+	}
 	phoneNumber, err := GetPhoneNumberFromPath(dir)
 	if err != nil {
 		return nil, err
@@ -149,35 +146,59 @@ func Get(dir string, limitsMode config.LimitsMode) (*Profile, error) {
 		return nil, err
 	}
 
-	// устанавливаем режим проверки лимитов
-	var checkLimits bool
+	// устанавливаем режим проверки лимитов. Если режим не указан тогда ипользуем установленный в профиле
 	switch limitsMode {
 	case config.LimitsModeDontCheckLimits:
-		checkLimits = false
+		prof.Config.APP.CheckLimits = false
 	case config.LimitsModeCheckLimits:
-		checkLimits = true
-	default:
-		checkLimits = prof.Config.APP.CheckLimits
+		prof.Config.APP.CheckLimits = true
 	}
 
-	if checkLimits {
+	if prof.Config.APP.CheckLimits {
 		//если у профиля ограничения по лимитам тогда игнорируем его
 		exLimits := prof.CheckAllLimits()
 		if exLimits != nil {
-			prof.Close()
+			prof.Close(1000)
 			return nil, fmt.Errorf("Limit is exceeded : \n%#v\n", exLimits)
 		}
 	}
+
 	return prof, nil
 }
 
 // IsProfile проверяем является ли указанная директория профилем. Профилем является директория с файлом конфигурации
 func IsProfile(path string) bool {
 	AddTail(&path)
-	if _, err := os.Stat(path + ProFile); err != nil {
+	profileFile := GetMainConfigFile(path)
+	if _, err := os.Stat(profileFile); err != nil {
 		return false
 	}
 	return true
+}
+
+func GetMainConfigFile(path string) string {
+	return filepath.Clean(path) + "/" + ProFile
+
+}
+
+// Ищем файлы с конфигурацией. Делаем поиск по всему пути
+func GetConfigFiles(path string) []string {
+
+	var result []string
+	result = append(result, GetMainConfigFile(path))
+
+	for path != "" && path != "/" {
+		path = filepath.Clean(path)
+		path = strings.TrimRight(path, filepath.Base(path))
+		files, _ := filepath.Glob(path + "/bot_*.toml")
+		result = append(result, files...)
+	}
+	if path == "" {
+		path = "./"
+	}
+	files, _ := filepath.Glob(path + "bot_*.toml")
+	result = append(result, files...)
+	return result
 }
 
 // Получить список профилей в директории

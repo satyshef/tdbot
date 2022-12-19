@@ -38,7 +38,8 @@ func (p *Profile) Remove() error {
 	return os.RemoveAll(p.Location())
 }
 
-func (p *Profile) Close() error {
+// @timeout - время ожидания закрытия в миллисекудах, 0 - не ждать
+func (p *Profile) Close(timeout int) error {
 	//fmt.Println("CLOSE PROFILE")
 	//Тест. Пробуем блокировку Level DB
 	//UnlockProfile(p.Location())
@@ -50,7 +51,10 @@ func (p *Profile) Close() error {
 	//p.User = nil
 	//p.Event = nil
 	//p.Config = nil
-	time.Sleep(time.Second * 1)
+	if timeout != 0 {
+		time.Sleep(time.Millisecond * time.Duration(timeout))
+	}
+
 	return nil
 }
 
