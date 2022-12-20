@@ -154,7 +154,7 @@ func Get(dir string, limitsMode config.LimitsMode) (*Profile, error) {
 		prof.Config.APP.CheckLimits = true
 	}
 
-	fmt.Println("Check limits", prof.Config.APP.CheckLimits)
+	//fmt.Println("Check limits", prof.Config.APP.CheckLimits)
 
 	if prof.Config.APP.CheckLimits {
 		//если у профиля ограничения по лимитам тогда игнорируем его
