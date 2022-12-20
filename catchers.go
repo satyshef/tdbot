@@ -13,14 +13,15 @@ import (
 func (bot *Bot) eventCatcher(tdEvent *tdc.SystemEvent) *tdlib.Error {
 	//fmt.Println("+++Catcher tdbot : ", tdEvent.Name)
 	//bot.Logger.Infof("NEW EVENT : %#v\n", tdEvent)
-
 	if tdEvent == nil {
 		return tdlib.NewError(tdc.ErrorCodeSystem, "CLIENT_EMPTY_UPDATE", "Received an empty update to client")
 	}
 
 	if bot.Profile == nil {
-		go bot.Restart()
-		return tdlib.NewError(profile.ErrorCodeDirNotExists, "PROFILE_NOT_INIT", "Profile not init")
+		// TODO: тест. в рабочем варианте срабатывает рестарт
+		//go bot.Restart()
+		go bot.Stop()
+		return tdlib.NewError(profile.ErrorCodeDirNotExists, "PROFILE_NOT_INIT", "Bot STOP! Profile not init")
 	}
 
 	if bot.Client == nil {
@@ -38,9 +39,10 @@ func (bot *Bot) eventCatcher(tdEvent *tdc.SystemEvent) *tdlib.Error {
 	switch tdEvent.Type {
 	case tdc.EventTypeRequest:
 		// если запрос то сначала проверяем лимиты затем пишим событие
-		if err := bot.CheckEventLimits(ev, bot.Profile.Config.APP.CheckLimits); err != nil {
+		if err := bot.CheckEventLimits(ev); err != nil {
 			return err
 		}
+
 		if err := bot.Profile.Event.Write(ev); err != nil && !strings.Contains(err.Error(), "Event not observed") {
 			bot.Logger.Errorln(err)
 			bot.Stop()
@@ -57,9 +59,7 @@ func (bot *Bot) eventCatcher(tdEvent *tdc.SystemEvent) *tdlib.Error {
 			bot.Stop()
 			return tdlib.NewError(profile.ErrorCodeLimitExceeded, "PROFILE_EVENT_DONT_WRITE", err.Error())
 		}
-
-		//Проверяем лимиты
-		if err := bot.CheckEventLimits(ev, bot.Profile.Config.APP.CheckLimits); err != nil {
+		if err := bot.CheckEventLimits(ev); err != nil {
 			bot.Logger.Errorf("LIMIT %#v\n", err.Message)
 			return nil
 		}

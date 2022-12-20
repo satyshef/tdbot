@@ -323,13 +323,16 @@ func (b *Bot) ProfileToDouble() error {
 }
 
 // Проверяем лимиты события
-func (bot *Bot) CheckEventLimits(evnt *event.Event, stop bool) *tdlib.Error {
+func (bot *Bot) CheckEventLimits(evnt *event.Event) *tdlib.Error {
+	if !bot.Profile.Config.APP.CheckLimits {
+		return nil
+	}
 	//bot.Logger.Errorln("Check LImit ", eventType, eventName)
 	exLimits := bot.Profile.CheckLimit(evnt.Type, evnt.Name)
 	for _, limit := range exLimits {
 		//если до оканачания ограничений много времени тогда останавливаем бота
 		//if limit.Interval > bot.Profile.Config.APP.DontRebootInterval && bot.Profile.Config.APP.Mode == 2 {
-		if stop && limit.Interval > bot.Profile.Config.APP.DontRebootInterval && bot.Profile.Config.APP.CheckLimits {
+		if limit.Interval > bot.Profile.Config.APP.DontRebootInterval {
 			bot.Stop()
 		}
 		l := &config.Limits{evnt.Type: {evnt.Name: exLimits}}

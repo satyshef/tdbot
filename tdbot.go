@@ -117,9 +117,12 @@ func (bot *Bot) Start() *tdlib.Error {
 
 	//bot.Profile.Reload()
 
-	if err := bot.Profile.Reload(); err != nil {
-		return tdlib.NewError(profile.ErrorCodeNotInit, "PROFILE_NOT_INIT", err.Error())
-	}
+	// TODO: test. Проверяем корректность работы без перазагрузки профиля
+	/*
+		if err := bot.Profile.Reload(); err != nil {
+			return tdlib.NewError(profile.ErrorCodeNotInit, "PROFILE_NOT_INIT", err.Error())
+		}
+	*/
 
 	bot.Status = StatusInit
 	bot.Profile.User.Status = user.StatusInitialization
@@ -158,8 +161,8 @@ func (bot *Bot) Start() *tdlib.Error {
 		return err
 	}
 
-	//TODO: получаем список чатов. Используем для смены паттерна поведения
-	bot.GetChatList(20)
+	//TODO: получаем список чатов. Используем для смены паттерна поведения. Создать метод в пакете mimicry
+	bot.GetChatList(4)
 
 	// получаем инфу об аккаунте
 	var me *user.User
@@ -248,7 +251,8 @@ func (bot *Bot) Stop() {
 
 }
 
-func (bot *Bot) Restart() {
+// DONT USED!
+func (bot *Bot) Restart1() {
 
 	if bot.Profile == nil {
 		bot.Logger.Debugln("Bot not restarted : profile not init")

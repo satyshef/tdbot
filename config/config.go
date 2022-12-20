@@ -90,9 +90,9 @@ type (
 
 // правила проверки лимитов
 const (
-	LimitsModeDefault         LimitsMode = -1 //как установлено в настройках профиля
-	LimitsModeDontCheckLimits LimitsMode = 0  //не проверять лимиты
-	LimitsModeCheckLimits     LimitsMode = 1  //проверять лимиты
+	LimitsModeDefault         LimitsMode = 0 //как установлено в настройках профиля
+	LimitsModeDontCheckLimits LimitsMode = 1 //не проверять лимиты
+	LimitsModeCheckLimits     LimitsMode = 2 //проверять лимиты
 )
 
 const (
