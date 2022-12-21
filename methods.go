@@ -1150,6 +1150,7 @@ func (bot *Bot) GetChat(chatname string, join bool) (*tdlib.Chat, *tdlib.Error) 
 		return nil, tdlib.NewError(ErrorCodeWrongData, "BOT_WRONG_DATA", "Empty chat ID")
 	}
 	var chat *tdlib.Chat
+	//var imInGroup bool
 	var err error
 	//Если пригласительная ссылка
 	if strings.Contains(chatname, "t.me/joinchat/") || strings.Contains(chatname, "t.me/+") {
@@ -1159,41 +1160,50 @@ func (bot *Bot) GetChat(chatname string, join bool) (*tdlib.Chat, *tdlib.Error) 
 		if err != nil {
 			return nil, tdlib.NewError(ErrorCodeSystem, "BOT_SYSTEM_ERROR", err.Error())
 		}
-
 		//Если уже в группе
 		if chatInfo.ChatID != 0 {
-			bot.Logger.Debugln("This bot is already in the group")
-			chat, _ := bot.Client.GetChat(chatInfo.ChatID)
-			return chat, nil
-		}
+			bot.Logger.Debugln("This bot is already in the group", chatname)
+			chat, _ = bot.Client.GetChat(chatInfo.ChatID)
 
-		//Вступаем в группу
-		chat, err = bot.Client.JoinChatByInviteLink(chatname)
-		if err != nil {
-			bot.Logger.Errorf("Join to %s error: %s\n", chatname, err)
-			return nil, err.(*tdlib.Error)
+		} else {
+			//Вступаем в группу
+			chat, err = bot.Client.JoinChatByInviteLink(chatname)
+			if err != nil {
+				bot.Logger.Errorf("Join to %s error: %s\n", chatname, err)
+				return nil, err.(*tdlib.Error)
+			}
 		}
-
 	} else {
 
 		//Если chatID == int64 тогда ищем чат по id иначе по имени
 		cid, err := strconv.ParseInt(chatname, 10, 64)
 		if err != nil {
-			chat, err = bot.Client.SearchPublicChat(chatname)
-			if err != nil {
-				return nil, err.(*tdlib.Error)
+			// Ищем в своих группах
+			// TODO: не всегда находит чат
+			//bot.Client.SearchChats(profile.RandomString(5), 1)
+			chts, _ := bot.Client.SearchChats(chatname, 1)
+			//fmt.Printf("%#v", chts)
+			if chts.TotalCount > 0 {
+				bot.Logger.Debugln("This bot is already in the group", chatname)
+				chat, _ = bot.Client.GetChat(chts.ChatIDs[0])
+			} else {
+				// Ищем публичную группу
+				chat, err = bot.Client.SearchPublicChat(chatname)
+				if err != nil {
+					return nil, err.(*tdlib.Error)
+				}
+				if join {
+					_, err := bot.Client.JoinChat(chat.ID)
+					if err != nil {
+						bot.Logger.Errorf("Join to %s error: %s\n", chat.ID, err)
+						return nil, err.(*tdlib.Error)
+					}
+				}
 			}
 		} else {
+			//Получаем группу по ID
 			chat, err = bot.Client.GetChat(cid)
 			if err != nil {
-				return nil, err.(*tdlib.Error)
-			}
-		}
-
-		if join {
-			_, err := bot.Client.JoinChat(chat.ID)
-			if err != nil {
-				bot.Logger.Errorf("Join to %s error: %s\n", chat.ID, err)
 				return nil, err.(*tdlib.Error)
 			}
 		}

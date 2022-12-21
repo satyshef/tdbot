@@ -68,7 +68,7 @@ func initClient(prof *profile.Profile) *tdc.Client {
 			ApplicationVersion:     prof.Config.APP.AppVersion,
 			UseMessageDatabase:     false, //
 			UseFileDatabase:        false, //
-			UseChatInfoDatabase:    false, //
+			UseChatInfoDatabase:    true,  //
 			UseTestDataCenter:      false,
 			DatabaseDirectory:      prof.Location() + "database",
 			FileDirectory:          prof.Location() + "files",
@@ -162,6 +162,7 @@ func (bot *Bot) Start() *tdlib.Error {
 	}
 
 	//TODO: получаем список чатов. Используем для смены паттерна поведения. Создать метод в пакете mimicry
+	//bot.Client.GetRecentlyOpenedChats(2)
 	bot.GetChatList(4)
 
 	// получаем инфу об аккаунте

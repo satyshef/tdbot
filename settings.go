@@ -6,7 +6,6 @@ import (
 
 	tdc "github.com/satyshef/go-tdlib/client"
 	"github.com/satyshef/go-tdlib/tdlib"
-	"github.com/satyshef/tdbot/config"
 	"github.com/satyshef/tdbot/events/event"
 	"github.com/satyshef/tdbot/profile"
 	"github.com/satyshef/tdbot/user"
@@ -327,16 +326,25 @@ func (bot *Bot) CheckEventLimits(evnt *event.Event) *tdlib.Error {
 	if !bot.Profile.Config.APP.CheckLimits {
 		return nil
 	}
+	needStop := false
 	//bot.Logger.Errorln("Check LImit ", eventType, eventName)
 	exLimits := bot.Profile.CheckLimit(evnt.Type, evnt.Name)
+	if len(exLimits) == 0 {
+		return nil
+	}
+	bot.Logger.Debugf("======== LIMIT %s :: %s ===========\n", evnt.Type, evnt.Name)
 	for _, limit := range exLimits {
 		//если до оканачания ограничений много времени тогда останавливаем бота
 		//if limit.Interval > bot.Profile.Config.APP.DontRebootInterval && bot.Profile.Config.APP.Mode == 2 {
 		if limit.Interval > bot.Profile.Config.APP.DontRebootInterval {
-			bot.Stop()
+			needStop = true
 		}
-		l := &config.Limits{evnt.Type: {evnt.Name: exLimits}}
-		return tdlib.NewError(profile.ErrorCodeLimitExceeded, "BOT_LIMIT_EXCEEDED", l.JSON())
+		//l := &config.Limits{evnt.Type: {evnt.Name: exLimits}}
+		bot.Logger.Debugln(limit.Limit, " : ", limit.Interval)
 	}
-	return nil
+
+	if needStop {
+		bot.Stop()
+	}
+	return tdlib.NewError(profile.ErrorCodeLimitExceeded, "BOT_LIMIT_EXCEEDED", "")
 }

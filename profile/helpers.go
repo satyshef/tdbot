@@ -11,6 +11,8 @@ import (
 	"time"
 )
 
+var letterRunes = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
+
 func loadRandomString(fileName string) string {
 
 	lines, err := readFileToSlice(fileName)
@@ -105,4 +107,12 @@ func makeProfileDir(path string) error {
 	}
 	//Если небыло ошибки значит директория уже существует
 	return fmt.Errorf("%s", "Profile exist")
+}
+
+func RandomString(n int) string {
+	b := make([]rune, n)
+	for i := range b {
+		b[i] = letterRunes[rand.Intn(len(letterRunes))]
+	}
+	return string(b)
 }
