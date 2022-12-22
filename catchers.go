@@ -39,6 +39,7 @@ func (bot *Bot) eventCatcher(tdEvent *tdc.SystemEvent) *tdlib.Error {
 
 	switch tdEvent.Type {
 	case tdc.EventTypeRequest:
+		bot.Logger.Infof("NEW EVENT : %#v\n", tdEvent)
 		// если запрос то сначала проверяем лимиты затем пишим событие
 		if err := bot.CheckEventLimits(ev); err != nil {
 			return err
