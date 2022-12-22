@@ -68,7 +68,7 @@ func initClient(prof *profile.Profile) *tdc.Client {
 			ApplicationVersion:     prof.Config.APP.AppVersion,
 			UseMessageDatabase:     false, //
 			UseFileDatabase:        false, //
-			UseChatInfoDatabase:    true,  //
+			UseChatInfoDatabase:    false, //
 			UseTestDataCenter:      false,
 			DatabaseDirectory:      prof.Location() + "database",
 			FileDirectory:          prof.Location() + "files",
