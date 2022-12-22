@@ -113,6 +113,7 @@ func (bot *Bot) Start() *tdlib.Error {
 	if bot.Profile == nil {
 		return tdlib.NewError(profile.ErrorCodeNotInit, "PROFILE_NOT_INIT", "Profile not init")
 	}
+
 	bot.Logger.Infoln("Starting the bot [MASTER VERSION]...")
 
 	//bot.Profile.Reload()

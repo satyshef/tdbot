@@ -130,6 +130,10 @@ func Get(dir string, limitsMode config.LimitsMode) (*Profile, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	if conf.APP.CheckLimits && conf.Limits == nil {
+		return nil, fmt.Errorf("%s", "Limits not set. If want continue please disable limits checking")
+	}
 	phoneNumber, err := GetPhoneNumberFromPath(dir)
 	if err != nil {
 		return nil, err
