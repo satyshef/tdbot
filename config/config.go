@@ -238,11 +238,32 @@ func (c *Config) Save(fileName string) error {
 	return nil
 }
 
+// Сбросить значения в файле конфигурации. Работает только с корневыми элементами
+func (c *Config) Reset(fileName string, args ...string) error {
+
+	fmt.Println("Reset :", fileName)
+	for _, arg := range args {
+		fmt.Println(arg, "...")
+		switch arg {
+		case "app":
+			c.APP = nil
+		case "limits":
+			c.Limits = nil
+		case "watch_list":
+			c.Watchlist = nil
+		case "mimicry":
+			c.Mimicry = nil
+		case "log":
+			c.Log = nil
+		case "proxy":
+			c.Proxy = nil
+		}
+	}
+
+	return c.Save(fileName)
+}
+
 func (c *Config) prepare() {
-
-	//c.APP.FirstName = strings.Trim(c.APP.FirstName, " \n\t")
-	//c.APP.DeviceModel = strings.Trim(c.APP.DeviceModel, " \n\t")
-
 	//set first name
 	if _, err := os.Stat(c.APP.FirstName); err == nil {
 		c.APP.FirstName = loadRandomString(c.APP.FirstName)
