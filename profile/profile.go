@@ -142,6 +142,7 @@ func Get(dir string, limitsMode config.LimitsMode) (*Profile, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	//Сохраняем конфигурацию для того чтобы зафиксировать время последнего доступа к профилю
 	//prof.SaveConfig()
 
@@ -150,17 +151,27 @@ func Get(dir string, limitsMode config.LimitsMode) (*Profile, error) {
 		return nil, err
 	}
 
+	var checkLimits bool
 	// устанавливаем режим проверки лимитов. Если режим не указан тогда ипользуем установленный в профиле
 	switch limitsMode {
 	case config.LimitsModeDontCheckLimits:
-		prof.Config.APP.CheckLimits = false
+		checkLimits = false
 	case config.LimitsModeCheckLimits:
-		prof.Config.APP.CheckLimits = true
+		checkLimits = true
+	default:
+		checkLimits = prof.Config.APP.CheckLimits
 	}
-
+	/*
+		switch limitsMode {
+		case config.LimitsModeDontCheckLimits:
+			prof.Config.APP.CheckLimits = false
+		case config.LimitsModeCheckLimits:
+			prof.Config.APP.CheckLimits = true
+		}
+	*/
 	//fmt.Println("Check limits", prof.Config.APP.CheckLimits)
 
-	if prof.Config.APP.CheckLimits {
+	if checkLimits {
 		//если у профиля ограничения по лимитам тогда игнорируем его
 		exLimits := prof.CheckAllLimits()
 		if exLimits != nil {

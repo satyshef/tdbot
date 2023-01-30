@@ -88,9 +88,11 @@ func (s *Store) SearchByTime(evType, evName string, minTime, maxTime int64) (evn
 // @evType - тип события
 // @evName - имя события
 func (s *Store) Search(evType, evName string) (evns []*event.Event, err error) {
-	if evType == "" && evName != "" {
-		return nil, fmt.Errorf("%s", "Event name set and type not specified")
-	}
+	/*
+		if evType == "" && evName != "" {
+			return nil, fmt.Errorf("%s", "Event name set and type not specified")
+		}
+	*/
 	var rang *util.Range
 	//Если не указан тип и имя тогда возвращаем все значения(range = nil)
 	if evType != "" && evName != "" {

@@ -126,6 +126,49 @@ func (bot *Bot) GetNewMessages(chatLimit int, msgLimit int32) ([]tdlib.Message, 
 	return result, nil
 }
 
+// Прочитать сообщения из чата
+// @chat - целевой чат
+// @msgLimit - максималькое количество сообщений. Максимум 100
+func (bot *Bot) GetLastMessage(chat *tdlib.Chat) (*tdlib.Message, *tdlib.Error) {
+	//var result []tdlib.Message
+	msgs, err := bot.Client.GetChatHistory(chat.ID, chat.LastMessage.ID, -1, 1, false)
+	if err != nil {
+		return nil, err.(*tdlib.Error)
+	}
+	if len(msgs.Messages) == 0 {
+		return nil, tdlib.NewError(ErrorCodeSystem, "BOT_SYSTEM_ERROR", "No message")
+	}
+	msg := msgs.Messages[0]
+
+	//fmt.Println("LEN", len(msgs.Messages))
+	//history := msgs.Messages[:len(msgs.Messages)-1]
+	/*
+		var ids []int64
+		// Помечаем сообщения как прочитаные
+		for _, m := range msgs.Messages {
+			var senderID int64
+			switch m.Sender.GetMessageSenderEnum() {
+			case tdlib.MessageSenderChatType:
+				senderID = m.Sender.(*tdlib.MessageSenderChat).ChatID
+			case tdlib.MessageSenderUserType:
+				senderID = m.Sender.(*tdlib.MessageSenderUser).UserID
+			}
+			if senderID == bot.Profile.User.ID {
+				continue
+			}
+			result = append(result, m)
+			ids = append(ids, m.ID)
+		}
+	*/
+	// Помечаем сообщения как прочитаные
+	_, err = bot.Client.ViewMessages(chat.ID, 0, []int64{msg.ID}, true)
+	if err != nil {
+		bot.Logger.Errorln(err)
+	}
+
+	return &msg, nil
+}
+
 // SendMessageToGroup отправить сообщение в чат
 // @name - имя группы
 // @msg - текст сообщения
@@ -1181,7 +1224,10 @@ func (bot *Bot) GetChat(chatname string, join bool) (*tdlib.Chat, *tdlib.Error) 
 			// Ищем в своих группах
 			// TODO: не всегда находит чат
 			//bot.Client.SearchChats(profile.RandomString(5), 1)
-			chts, _ := bot.Client.SearchChats(chatname, 1)
+			chts, err := bot.Client.SearchChats(chatname, 1)
+			if err != nil {
+				return nil, err.(*tdlib.Error)
+			}
 			//fmt.Printf("%#v", chts)
 			if chts.TotalCount > 0 {
 				bot.Logger.Debugln("This bot is already in the group", chatname)

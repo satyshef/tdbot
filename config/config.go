@@ -238,13 +238,14 @@ func (c *Config) Save(fileName string) error {
 	return nil
 }
 
+// app:check_limits:
 // Сбросить значения в файле конфигурации. Работает только с корневыми элементами
-func (c *Config) Reset(fileName string, args ...string) error {
-
+func (c *Config) Reset(fileName string, params ...string) error {
 	fmt.Println("Reset :", fileName)
-	for _, arg := range args {
-		fmt.Println(arg, "...")
-		switch arg {
+
+	for _, param := range params {
+		fmt.Println(param, "...")
+		switch param {
 		case "app":
 			c.APP = nil
 		case "limits":
@@ -261,6 +262,16 @@ func (c *Config) Reset(fileName string, args ...string) error {
 	}
 
 	return c.Save(fileName)
+
+	/*
+		tmpConf := &Config{}
+		toml.Decode(params[0], tmpConf)
+		for i := range tmpConf {
+
+		}
+		//fmt.Printf("SSS %#v\n", tmpConf.APP)
+		return nil
+	*/
 }
 
 func (c *Config) prepare() {
