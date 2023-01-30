@@ -131,7 +131,7 @@ func (bot *Bot) GetNewMessages(chatLimit int, msgLimit int32) ([]tdlib.Message, 
 // @msgLimit - максималькое количество сообщений. Максимум 100
 func (bot *Bot) GetLastMessage(chat *tdlib.Chat) (*tdlib.Message, *tdlib.Error) {
 	//var result []tdlib.Message
-	if chat.LastMessage == nil {
+	if chat == nil || chat.LastMessage == nil {
 		return nil, tdlib.NewError(ErrorCodeSystem, "BOT_SYSTEM_ERROR", "No last message ID")
 	}
 	msgs, err := bot.Client.GetChatHistory(chat.ID, chat.LastMessage.ID, -1, 1, false)
