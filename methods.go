@@ -359,6 +359,32 @@ func (bot *Bot) GetChatFullInfo(cid int64) (*chat.Chat, *tdlib.Error) {
 	}
 
 	switch chatInfo.Type.GetChatTypeEnum() {
+	case tdlib.ChatTypeBasicGroupType:
+		group, err := bot.Client.GetBasicGroup(chatInfo.Type.(*tdlib.ChatTypeBasicGroup).BasicGroupID)
+		if err != nil {
+			return nil, err.(*tdlib.Error)
+		}
+
+		chat := chat.New(chatInfo.ID, chatInfo.Title, "", chat.TypeGroup)
+		chat.DateCreation = 0
+		chat.HasLinkedChat = false
+		chat.IsScam = false
+		chat.IsVerified = false
+		chat.MemberCount = group.MemberCount
+
+		//Не корректно отображает дату последнего сообщения
+		if chatInfo.LastMessage != nil {
+			chat.DateLastMessage = chatInfo.LastMessage.Date
+		}
+
+		// get caht description
+		f, err := bot.Client.GetBasicGroupFullInfo(group.ID)
+		if err == nil {
+			chat.BIO = f.Description
+		}
+
+		return chat, nil
+
 	case tdlib.ChatTypeSupergroupType:
 		//supergroup
 		var chatType chat.Type

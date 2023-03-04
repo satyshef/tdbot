@@ -13,6 +13,8 @@ type User struct {
 	//Health      Health `json:"health"` //текущее состояние
 	Location string `json:"location"`
 	Type     Type   `json:"type"`
+	Role     string `json:"role"`
+	Group    string `json:"group"`
 }
 
 // Type ...
@@ -58,12 +60,14 @@ var (
 	//StatusLimitExceeded Status = "limit"
 )
 
+/*
 var (
 	HealthGood  Health = "good"
 	HealthBan   Health = "ban"
 	HealthLimit Health = "limit"
 )
 
+*/
 // New ...
 func New(name, phone string, usrType Type) *User {
 

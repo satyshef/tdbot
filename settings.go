@@ -125,7 +125,10 @@ func (bot *Bot) SetPhoneMode(mode int) *tdlib.Error {
 }
 
 //GetMe Информация о текущем пользователе
-func (bot *Bot) GetMe() (*user.User, *tdlib.Error) {
+func (bot *Bot) GetMe(reload bool) (*user.User, *tdlib.Error) {
+	if !reload {
+		return bot.Profile.User, nil
+	}
 	var usr *user.User
 	me, err := bot.Client.GetMe()
 	if err != nil {
@@ -145,6 +148,8 @@ func (bot *Bot) GetMe() (*user.User, *tdlib.Error) {
 	}
 	usr.Location = country.Text
 	usr.Status = bot.Profile.User.Status
+	usr.Role = bot.Profile.Config.Condition.Role
+	usr.Group = bot.Profile.Config.Condition.Group
 	bot.Profile.User = usr
 	return usr, nil
 }

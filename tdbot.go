@@ -76,7 +76,6 @@ func initClient(prof *profile.Profile) *tdc.Client {
 			UseSecretChats:         true,
 			EnableStorageOptimizer: true,
 		})
-
 	return c
 }
 
@@ -168,7 +167,7 @@ func (bot *Bot) Start() *tdlib.Error {
 
 	// получаем инфу об аккаунте
 	var me *user.User
-	if me, err = bot.GetMe(); err != nil || me.ID == 0 {
+	if me, err = bot.GetMe(true); err != nil || me.ID == 0 {
 		//bot.Stop()
 		return err
 	}

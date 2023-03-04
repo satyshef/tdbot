@@ -18,13 +18,19 @@ import (
 type (
 	//Config конфигурация бота
 	Config struct {
-		Version   string   `toml:"version"`
-		APP       *APP     `toml:"app"`
-		Limits    Limits   `toml:"limits"`
-		Watchlist []string `toml:"watch_list"`
-		Mimicry   *Mimicry `toml:"mimicry"`
-		Log       *Log     `toml:"log"`
-		Proxy     *Proxy   `toml:"proxy"`
+		Version   string     `toml:"version"`
+		Condition *Condition `toml:"condition"`
+		APP       *APP       `toml:"app"`
+		Limits    Limits     `toml:"limits"`
+		Watchlist []string   `toml:"watch_list"`
+		Mimicry   *Mimicry   `toml:"mimicry"`
+		Log       *Log       `toml:"log"`
+		Proxy     *Proxy     `toml:"proxy"`
+	}
+
+	Condition struct {
+		Role  string `toml:"role"` //inviter, mail, seeker
+		Group string `toml:"group"`
 	}
 
 	//APP конфигурация клиента телеграм бота
@@ -105,7 +111,8 @@ const (
 func New() *Config {
 
 	return &Config{
-		Version: "0.00",
+		Version:   "0.00",
+		Condition: &Condition{Role: "none", Group: "none"},
 		APP: &APP{
 			ID:                 "187786",
 			Hash:               "e782045df67ba48e441ccb105da8fc85",
@@ -211,30 +218,14 @@ func (c *Config) Load(paths ...string) error {
 //Save сохранить конфигурацию
 // @fileName - путь к файлу в который сохраняем
 func (c *Config) Save(fileName string) error {
-	//fmt.Printf("Save configuration to %s\n", fileName)
 	f, err := os.Create(fileName)
 	if err != nil {
 		return fmt.Errorf("%s", err)
 	}
-
 	defer f.Close()
-
-	/*
-		//Делаем копию что бы не изменить основную структуру
-		var b Config
-		copier.Copy(&b, c)
-		b.APP.ID = ""
-		b.APP.Hash = ""
-	*/
 	if err := toml.NewEncoder(f).Encode(c); err != nil {
 		return fmt.Errorf("%s", err)
 	}
-	/*
-		if err := f.Close(); err != nil {
-			return fmt.Errorf("%s", err)
-		}
-	*/
-
 	return nil
 }
 
