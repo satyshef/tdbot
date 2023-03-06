@@ -109,6 +109,17 @@ func makeProfileDir(path string) error {
 	return fmt.Errorf("%s", "Profile exist")
 }
 
+func IsExistDir(path string) bool {
+	if _, err := os.Stat(path); err != nil {
+		if os.IsNotExist(err) {
+			return false
+		}
+		fmt.Printf("Check dir error: %s", err)
+		return false
+	}
+	return true
+}
+
 func RandomString(n int) string {
 	b := make([]rune, n)
 	for i := range b {
