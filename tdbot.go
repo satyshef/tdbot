@@ -3,6 +3,7 @@ package tdbot
 import (
 	"fmt"
 	"log"
+	"sync"
 
 	"time"
 
@@ -22,6 +23,7 @@ type (
 		Status    botStatus
 		InputChan chan string
 		StopWork  chan bool
+		wg        sync.WaitGroup
 		//PrivateChan *tdlib.Chat
 	}
 )
@@ -126,7 +128,7 @@ func (bot *Bot) Start() *tdlib.Error {
 
 	bot.Status = StatusInit
 	bot.Profile.User.Status = user.StatusInitialization
-
+	//fmt.Println("Log ", bot.Logger.Level)
 	bot.Logger.Infoln("Add handler ...")
 	//добавляем встроенный обработчик событий
 	bot.Client.AddEventHandler(bot.eventCatcher)
@@ -238,10 +240,31 @@ func (bot *Bot) Stop() {
 	if bot == nil || bot.Client == nil || bot.Status == StatusStopped || bot.Status == StatusStopping {
 		return
 	}
+
 	currentStatus := bot.Status
 	bot.Logger.Infoln("Stopping the bot ...")
 	bot.Status = StatusStopping
 	bot.Profile.User.Status = user.StatusStopped
+
+	// Если не дождались WG тогда принудительно останавливаем(наблюдались зависания при TIMEOUT запроса)
+	stop := false
+	timeout := 20
+	go func() {
+		for i := 0; i <= timeout; i++ {
+			if stop {
+				return
+			}
+			time.Sleep(time.Second * 1)
+		}
+		if bot != nil {
+			bot.wg.Done()
+		}
+
+	}()
+
+	bot.wg.Wait()
+	stop = true
+
 	bot.destroyClient()
 	bot.Status = StatusStopped
 	if currentStatus == StatusReady {

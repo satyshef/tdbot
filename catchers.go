@@ -2,7 +2,6 @@ package tdbot
 
 import (
 	"strings"
-	"time"
 
 	tdc "github.com/satyshef/go-tdlib/client"
 	"github.com/satyshef/go-tdlib/tdlib"
@@ -64,7 +63,7 @@ func (bot *Bot) eventCatcher(tdEvent *tdc.SystemEvent) *tdlib.Error {
 
 		//Делаем задержку перед проверкой лимитов для того что бы успели вернуть API ответ
 		go func() {
-			time.Sleep(time.Second * 1)
+			//time.Sleep(time.Second * 1)
 			bot.CheckEventLimits(ev)
 		}()
 

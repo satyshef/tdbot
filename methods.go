@@ -434,19 +434,20 @@ func (bot *Bot) InviteByUserName(username, chatname string) (int64, *tdlib.Error
 	if !bot.IsRun() {
 		return 0, tdlib.NewError(ErrorCodeWrongData, "BOT_SYSTEM_ERROR", "Bot dying")
 	}
+	// Блокируем остановку бота до завершения работы функции
+	bot.wg.Add(1)
+	defer bot.wg.Done()
 
 	destChat, e := bot.GetChat(chatname, true)
 	if e != nil {
 		return 0, e
 	}
-
 	userChat, err := bot.Client.SearchPublicChat(username)
 	if err != nil {
 		e := err.(*tdlib.Error)
 		bot.Logger.Debugf("Invite user %s - %s", username, e.Message)
 		return 0, e
 	}
-
 	_, err = bot.Client.AddChatMember(destChat.ID, userChat.ID, 100)
 	if err != nil {
 		e := err.(*tdlib.Error)
@@ -455,13 +456,11 @@ func (bot *Bot) InviteByUserName(username, chatname string) (int64, *tdlib.Error
 	} else {
 		bot.Logger.Debugf("Invite user %s - OK", username)
 	}
-
 	// Проверяем добавился ли пользователь
 	e = bot.CheckMember(destChat.ID, userChat.ID, 1)
 	if e != nil {
 		return 0, e
 	}
-
 	return userChat.ID, nil
 }
 
