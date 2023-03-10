@@ -11,7 +11,7 @@ import (
 	"github.com/satyshef/tdbot/chat"
 )
 
-const checkMemberTimeout = 100
+const checkMemberTimeout = 2000 //millisec
 
 // ============================ NEW METHODS ======================================================
 // Собрать все не прочитаные сообщения. Сообщение загружаются со всех чатов в которых состоит бот
