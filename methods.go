@@ -11,6 +11,8 @@ import (
 	"github.com/satyshef/tdbot/chat"
 )
 
+const checkMemberTimeout = 100
+
 // ============================ NEW METHODS ======================================================
 // Собрать все не прочитаные сообщения. Сообщение загружаются со всех чатов в которых состоит бот
 func (bot *Bot) GetNewMessagesAll(chatLimit int32) ([]tdlib.Message, *tdlib.Error) {
@@ -457,7 +459,7 @@ func (bot *Bot) InviteByUserName(username, chatname string) (int64, *tdlib.Error
 		bot.Logger.Debugf("Invite user %s - OK", username)
 	}
 	// Проверяем добавился ли пользователь
-	e = bot.CheckMember(destChat.ID, userChat.ID, 1)
+	e = bot.CheckMember(destChat.ID, userChat.ID, checkMemberTimeout)
 	if e != nil {
 		return 0, e
 	}
@@ -568,7 +570,7 @@ func (bot *Bot) InviteByName(name string, userID int64, chatNameSource, chatName
 	}
 
 	// Проверяем добавился ли пользователь
-	e = bot.CheckMember(destChat.ID, uid, 1)
+	e = bot.CheckMember(destChat.ID, uid, checkMemberTimeout)
 	if e != nil {
 		return 0, e
 	}
@@ -603,7 +605,7 @@ func (bot *Bot) InviteByUserPhone(phone, chatname string) (int64, *tdlib.Error) 
 	}
 
 	// Проверяем добавился ли пользователь
-	e = bot.CheckMember(destChat.ID, uid, 1)
+	e = bot.CheckMember(destChat.ID, uid, checkMemberTimeout)
 	if e != nil {
 		return 0, e
 	}
@@ -636,7 +638,7 @@ func (bot *Bot) InviteByID(uid, cid int64) *tdlib.Error {
 		return err.(*tdlib.Error)
 	}
 	// Проверяем добавился ли пользователь
-	e := bot.CheckMember(cid, uid, 1)
+	e := bot.CheckMember(cid, uid, checkMemberTimeout)
 	if e != nil {
 		return e
 	}
