@@ -470,6 +470,9 @@ func (bot *Bot) InviteByUserNameTest(username, chatname string) (int64, *tdlib.E
 	if !bot.IsRun() {
 		return 0, tdlib.NewError(ErrorCodeWrongData, "BOT_SYSTEM_ERROR", "Bot dying")
 	}
+	// Блокируем остановку бота до завершения работы функции
+	bot.wg.Add(1)
+	defer bot.wg.Done()
 
 	users, err := bot.Client.SearchContacts(username, 10)
 	if err != nil {
@@ -518,6 +521,10 @@ func (bot *Bot) InviteByName(name string, userID int64, chatNameSource, chatName
 	if !bot.IsRun() {
 		return 0, tdlib.NewError(ErrorCodeWrongData, "BOT_SYSTEM_ERROR", "Bot dying")
 	}
+	// Блокируем остановку бота до завершения работы функции
+	bot.wg.Add(1)
+	defer bot.wg.Done()
+
 	sourceChat, e := bot.GetChat(chatNameSource, true)
 	if e != nil {
 		return 0, e
@@ -582,6 +589,9 @@ func (bot *Bot) InviteByUserPhone(phone, chatname string) (int64, *tdlib.Error) 
 	if !bot.IsRun() {
 		return 0, tdlib.NewError(ErrorCodeWrongData, "BOT_SYSTEM_ERROR", "Bot dying")
 	}
+	// Блокируем остановку бота до завершения работы функции
+	bot.wg.Add(1)
+	defer bot.wg.Done()
 
 	destChat, e := bot.GetChat(chatname, true)
 	if e != nil {
@@ -618,6 +628,9 @@ func (bot *Bot) InviteByID(uid, cid int64) *tdlib.Error {
 	if !bot.IsRun() {
 		return tdlib.NewError(ErrorCodeWrongData, "BOT_SYSTEM_ERROR", "Bot dying")
 	}
+	// Блокируем остановку бота до завершения работы функции
+	bot.wg.Add(1)
+	defer bot.wg.Done()
 	/*
 		destChat, e := bot.GetChat(chat, false)
 		if e != nil {
