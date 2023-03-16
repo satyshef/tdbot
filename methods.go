@@ -731,7 +731,7 @@ func (bot *Bot) GetUserByPhone(phone string) (*tdlib.User, *tdlib.Error) {
 func (bot *Bot) SendMessageChatMembers(chatAddr string, message string, offset int32, limit int32) ([]tdlib.ChatMember, *tdlib.Error) {
 
 	result := []tdlib.ChatMember{}
-	members, err := bot.GetChatMembers(chatAddr, offset, limit)
+	members, err := bot.GetChatMembers(chatAddr, offset, limit, true)
 
 	if len(members) > 0 {
 		for _, m := range members {
@@ -782,7 +782,7 @@ func (bot *Bot) GetChatUsers_(chatname string, offset int32, limit int32) ([]tdl
 */
 
 // Загрузить список пользователей группы с полной информацией о них
-func (bot *Bot) GetChatUsers(chatname string, offset int32, limit int32) (result []tdlib.User, err *tdlib.Error) {
+func (bot *Bot) GetChatUsers(chatname string, offset int32, limit int32, join bool) (result []tdlib.User, err *tdlib.Error) {
 	if !bot.IsRun() {
 		return nil, tdlib.NewError(ErrorCodeWrongData, "BOT_SYSTEM_ERROR", "Bot dying")
 	}
@@ -810,7 +810,7 @@ func (bot *Bot) GetChatUsers(chatname string, offset int32, limit int32) (result
 	//return nil, tdlib.NewError(ErrorCodeWrongData, "BOT_WRONG_DATA", "Sum offset and limit should not exceed 10000")
 
 	for ; limit > 0; limit -= count {
-		members, err = bot.GetChatMembers(chatname, offset, count)
+		members, err = bot.GetChatMembers(chatname, offset, count, join)
 		len := int32(len(members))
 		if err != nil || len == 0 {
 			break
@@ -843,7 +843,7 @@ func (bot *Bot) GetChatUsers(chatname string, offset int32, limit int32) (result
 
 // Загрузить список участников группы. Группа может быть как обычная(до 200) так и супергруппа(до 200к) участников. Возвращает ID участников и их статус
 // @chatname - имя или сслыка на чат
-func (bot *Bot) GetChatMembers(chatname string, offset int32, limit int32) ([]tdlib.ChatMember, *tdlib.Error) {
+func (bot *Bot) GetChatMembers(chatname string, offset int32, limit int32, join bool) ([]tdlib.ChatMember, *tdlib.Error) {
 	if !bot.IsRun() {
 		return nil, tdlib.NewError(ErrorCodeWrongData, "BOT_SYSTEM_ERROR", "Bot dying")
 	}
@@ -857,7 +857,7 @@ func (bot *Bot) GetChatMembers(chatname string, offset int32, limit int32) ([]td
 	var err error
 	var result []tdlib.ChatMember
 	//TODO: плохая идея оставаться в чате
-	chat, e := bot.GetChat(chatname, true)
+	chat, e := bot.GetChat(chatname, join)
 	if e != nil {
 		return nil, e
 	}
@@ -936,7 +936,7 @@ func (bot *Bot) CopyGroupMembers(source, destination string, offset int32, limit
 	result := []tdlib.ChatMember{}
 
 	// Загружаем список участников группы-донора
-	members, err := bot.GetChatMembers(source, offset, limit)
+	members, err := bot.GetChatMembers(source, offset, limit, true)
 	if len(members) > 0 {
 		destChat, e := bot.GetChat(destination, true)
 		if e != nil {

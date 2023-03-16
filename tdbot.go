@@ -250,16 +250,20 @@ func (bot *Bot) Stop() {
 	stop := false
 	timeout := 20
 	go func() {
+		fmt.Println("Stage 1")
 		for i := 0; i <= timeout; i++ {
 			if stop {
+				fmt.Println("Stage 2")
 				return
 			}
 			time.Sleep(time.Second * 1)
 		}
+		fmt.Println("Stage 3")
 		if bot != nil {
+			fmt.Println("Stage 4")
 			bot.wg.Done()
 		}
-
+		fmt.Println("Stage 5")
 	}()
 
 	bot.wg.Wait()
