@@ -242,7 +242,7 @@ func (bot *Bot) Stop() {
 	}
 
 	currentStatus := bot.Status
-	bot.Logger.Infoln("Stopping the bot ...")
+	bot.Logger.Infof("Stopping the bot (status %s\n)...", currentStatus)
 	bot.Status = StatusStopping
 	bot.Profile.User.Status = user.StatusStopped
 
@@ -268,10 +268,12 @@ func (bot *Bot) Stop() {
 
 	bot.wg.Wait()
 	stop = true
-
+	fmt.Println("Stage 6")
 	bot.destroyClient()
+	fmt.Println("Stage 7")
 	bot.Status = StatusStopped
 	if currentStatus == StatusReady {
+		fmt.Println("Stage 8")
 		bot.StopWork <- true
 	}
 	//bot.Profile.Close()
