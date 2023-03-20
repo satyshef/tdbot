@@ -466,6 +466,45 @@ func (bot *Bot) InviteByUserName(username, chatname string) (int64, *tdlib.Error
 	return userChat.ID, nil
 }
 
+func (bot *Bot) AddAdminChat(username, chatname string) (int64, *tdlib.Error) {
+	if !bot.IsRun() {
+		return 0, tdlib.NewError(ErrorCodeWrongData, "BOT_SYSTEM_ERROR", "Bot dying")
+	}
+	// Блокируем остановку бота до завершения работы функции
+	bot.wg.Add(1)
+	defer bot.wg.Done()
+
+	destChat, e := bot.GetChat(chatname, true)
+	if e != nil {
+		return 0, e
+	}
+	userChat, err := bot.Client.SearchPublicChat(username)
+	if err != nil {
+		e := err.(*tdlib.Error)
+		bot.Logger.Debugf("Add admin %s - %s", username, e.Message)
+		return 0, e
+	}
+
+	status := tdlib.NewChatMemberStatusAdministrator("temp", false, false, false, false, false, false, true, false, false, false, false, false)
+	//status := tdlib.NewChatMemberStatusAdministrator("temp", true, true, true, true, true, true, true, true, true, true, true, true)
+	member := tdlib.NewMessageSenderUser(userChat.ID)
+	_, err = bot.Client.SetChatMemberStatus(destChat.ID, member, status)
+	//_, err = bot.Client.AddChatMember(destChat.ID, userChat.ID, 100)
+	if err != nil {
+		e := err.(*tdlib.Error)
+		bot.Logger.Debugf("Add admin %s - %s", username, e.Message)
+		return 0, e
+	} else {
+		bot.Logger.Debugf("Add admin %s - OK", username)
+	}
+	// Проверяем добавился ли пользователь
+	e = bot.CheckMember(destChat.ID, userChat.ID, checkMemberTimeout)
+	if e != nil {
+		return 0, e
+	}
+	return userChat.ID, nil
+}
+
 func (bot *Bot) InviteByUserNameTest(username, chatname string) (int64, *tdlib.Error) {
 	if !bot.IsRun() {
 		return 0, tdlib.NewError(ErrorCodeWrongData, "BOT_SYSTEM_ERROR", "Bot dying")

@@ -10,7 +10,7 @@ require (
 	github.com/BurntSushi/toml v1.2.0
 	github.com/imdario/mergo v0.3.13
 	github.com/juju/fslock v0.0.0-20160525022230-4d5c94c67b4b
-	github.com/satyshef/go-tdlib v0.3.14-dev
+	github.com/satyshef/go-tdlib v0.3.15
 	github.com/sirupsen/logrus v1.9.0
 	github.com/syndtr/goleveldb v1.0.0
 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c
