@@ -485,9 +485,12 @@ func (bot *Bot) AddAdminChat(username, chatname string) (int64, *tdlib.Error) {
 		return 0, e
 	}
 
-	status := tdlib.NewChatMemberStatusAdministrator("temp", false, false, false, false, false, false, true, false, false, false, false, false)
-	//status := tdlib.NewChatMemberStatusAdministrator("temp", true, true, true, true, true, true, true, true, true, true, true, true)
+	//status := tdlib.NewChatMemberStatusAdministrator("temp", false, false, false, false, false, false, true, false, false, false, false, false)
+	status := tdlib.NewChatMemberStatusAdministrator("Admin", true, true, true, true, true, true, true, true, true, true, true, true)
+	fmt.Printf("STATUS %#v\n\n", status)
 	member := tdlib.NewMessageSenderUser(userChat.ID)
+	//mmm := tdlib.NewChatMember(member, 0, 0, status)
+	//member := tdlib.NewChatAdministrator(userChat.ID, "temp", false)s
 	_, err = bot.Client.SetChatMemberStatus(destChat.ID, member, status)
 	//_, err = bot.Client.AddChatMember(destChat.ID, userChat.ID, 100)
 	if err != nil {
