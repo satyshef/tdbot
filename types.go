@@ -61,7 +61,7 @@ func ConvertUser(orig *tdlib.User) *user.User {
 	usr.ID = orig.ID
 	usr.FirstName = orig.FirstName
 	usr.LastName = orig.LastName
-	usr.Addr = orig.Username
+	usr.Addr = orig.Usernames.EditableUsername
 
 	//WasOnline:   ???? //доделать получение времени активности
 

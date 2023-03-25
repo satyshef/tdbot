@@ -400,10 +400,10 @@ func (bot *Bot) GetChatFullInfo(cid int64) (*chat.Chat, *tdlib.Error) {
 			chatType = chat.TypeGroup
 		}
 
-		//bot.Logger.Infof("FULL CHAT :\n%#v\n\n", f)
+		//bot.Logger.Infof("FULL CHAT :\n%#v\n\n", superGroup)
 		//bot.Logger.Infof("Sender :\n%#v\n\n", chatInfo.LastMessage.Date)
 
-		chat := chat.New(chatInfo.ID, chatInfo.Title, superGroup.Username, chatType)
+		chat := chat.New(chatInfo.ID, chatInfo.Title, superGroup.Usernames.EditableUsername, chatType)
 		chat.DateCreation = superGroup.Date
 		chat.HasLinkedChat = superGroup.HasLinkedChat
 		chat.IsScam = superGroup.IsScam
