@@ -37,7 +37,7 @@ type Chat struct {
 // Тип чата
 type Type string
 
-var (
+const (
 	TypeChannel        Type = "channel"
 	TypePrivateChannel Type = "private_channel"
 	TypeGroup          Type = "group"

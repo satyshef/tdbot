@@ -15,6 +15,82 @@ const checkMemberTimeout = 2000 //millisec
 
 // ============================ NEW METHODS ======================================================
 // Собрать все не прочитаные сообщения. Сообщение загружаются со всех чатов в которых состоит бот
+// @timeout - задержка между запросами в миллисе
+func (bot *Bot) GetChatMessages(chatID int64, limit int32, fromMessageID int64, timeout int) ([]tdlib.Message, *tdlib.Error) {
+	var result []tdlib.Message
+	step := int32(99)
+	var countResult int32
+
+	for ; limit > 0; limit -= countResult {
+		time.Sleep(time.Millisecond * time.Duration(timeout))
+		msgs, err := bot.Client.GetChatHistory(chatID, fromMessageID, 0, step, false)
+		if err != nil {
+			bot.Logger.Errorln("Get chat history : ", err)
+			return nil, err.(*tdlib.Error)
+		}
+
+		countResult = int32(len(msgs.Messages))
+		fmt.Println("Parse ", countResult)
+		if countResult == 0 {
+			break
+		}
+
+		result = append(result, msgs.Messages...)
+		fromMessageID = msgs.Messages[countResult-1].ID
+	}
+
+	//fmt.Println("All count", len(result))
+	//os.Exit(1)
+	/*
+		msgs, err := bot.Client.GetChatHistory(chatID, 3763339264, 0, 4, false)
+		if err != nil {
+			bot.Logger.Errorln("Get chat history : ", err)
+			return nil, err.(*tdlib.Error)
+		}
+
+		fmt.Printf("ID %d\n\n", msgs.Messages[len(msgs.Messages)-1].ID)
+		return msgs.Messages, nil
+	*/
+
+	/*
+			history := msgs.Messages[:len(msgs.Messages)-1]
+			if err != nil {
+				bot.Logger.Errorln("Get chat history : ", err)
+				break
+			} else {
+				var ids []int64
+				// Помечаем сообщения как прочитаные
+				for _, m := range history {
+					var senderID int64
+					switch m.Sender.GetMessageSenderEnum() {
+					case tdlib.MessageSenderChatType:
+						senderID = m.Sender.(*tdlib.MessageSenderChat).ChatID
+					case tdlib.MessageSenderUserType:
+						senderID = m.Sender.(*tdlib.MessageSenderUser).UserID
+					}
+					if senderID == bot.Profile.User.ID {
+						continue
+					}
+					result = append(result, m)
+					ids = append(ids, m.ID)
+				}
+				_, err := bot.Client.ViewMessages(c.ID, 0, ids, true)
+				if err != nil {
+					bot.Logger.Errorln(err)
+				}
+				c, err = bot.Client.GetChat(c.ID)
+				if err != nil {
+					bot.Logger.Errorln(err)
+					time.Sleep(time.Second * 1)
+				}
+			}
+		}
+	*/
+
+	return result, nil
+}
+
+// Собрать все не прочитаные сообщения. Сообщение загружаются со всех чатов в которых состоит бот
 func (bot *Bot) GetNewMessagesAll(chatLimit int32) ([]tdlib.Message, *tdlib.Error) {
 	var result []tdlib.Message
 	chats, err := bot.GetChatList(chatLimit)
@@ -64,7 +140,7 @@ func (bot *Bot) GetNewMessagesAll(chatLimit int32) ([]tdlib.Message, *tdlib.Erro
 	return result, nil
 }
 
-// Собрать все не прочитаные сообщения. Сообщение загружаются со всех чатов в которых состоит бот
+// Собрать не прочитаные сообщения. Сообщение загружаются со всех чатов в которых состоит бот
 // @chatLimit - максимальное количество обрабатываемых чатов
 // @msgLimit - максималькое количество сообщений. Максимум 100
 func (bot *Bot) GetNewMessages(chatLimit int, msgLimit int32) ([]tdlib.Message, *tdlib.Error) {
