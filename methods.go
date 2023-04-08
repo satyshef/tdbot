@@ -14,12 +14,17 @@ import (
 const checkMemberTimeout = 2000 //millisec
 
 // ============================ NEW METHODS ======================================================
-// Собрать все не прочитаные сообщения. Сообщение загружаются со всех чатов в которых состоит бот
-// @timeout - задержка между запросами в миллисе
-func (bot *Bot) GetChatMessages(chatID int64, limit int32, fromMessageID int64, timeout int) ([]tdlib.Message, *tdlib.Error) {
+// Загрузить историю сообщений чата
+// @timeout - задержка между запросами в миллисек
+// @limit - лимит сообщений, если 0 тогда значение по умолчанию 100k
+func (bot *Bot) GetChatHistory(chatID int64, limit int32, fromMessageID int64, timeout int) ([]tdlib.Message, *tdlib.Error) {
 	var result []tdlib.Message
 	step := int32(99)
 	var countResult int32
+
+	if limit == 0 {
+		limit = 100000
+	}
 
 	for ; limit > 0; limit -= countResult {
 		time.Sleep(time.Millisecond * time.Duration(timeout))
@@ -38,112 +43,79 @@ func (bot *Bot) GetChatMessages(chatID int64, limit int32, fromMessageID int64, 
 		result = append(result, msgs.Messages...)
 		fromMessageID = msgs.Messages[countResult-1].ID
 	}
+	return result, nil
+}
 
-	//fmt.Println("All count", len(result))
-	//os.Exit(1)
-	/*
-		msgs, err := bot.Client.GetChatHistory(chatID, 3763339264, 0, 4, false)
+// Собрать все не прочитаные сообщения.
+func (bot *Bot) GetUnreadMessagesAll(chat *tdlib.Chat, timestamp int32) ([]tdlib.Message, *tdlib.Error) {
+	var result []tdlib.Message
+	var fromMessageID int64
+	var countResult int32
+	lastMessageID := chat.LastReadInboxMessageID
+
+	// chats, err := bot.GetChatList(chatLimit)
+	// if err != nil {
+	// 	return nil, err
+	// } else {
+	// 	for _, c := range chats {
+	for chat.UnreadCount != 0 {
+		msgs, err := bot.Client.GetChatHistory(chat.ID, fromMessageID, 0, 99, false)
 		if err != nil {
 			bot.Logger.Errorln("Get chat history : ", err)
-			return nil, err.(*tdlib.Error)
-		}
-
-		fmt.Printf("ID %d\n\n", msgs.Messages[len(msgs.Messages)-1].ID)
-		return msgs.Messages, nil
-	*/
-
-	/*
-			history := msgs.Messages[:len(msgs.Messages)-1]
-			if err != nil {
-				bot.Logger.Errorln("Get chat history : ", err)
+			break
+		} else {
+			var ids []int64
+			countResult = int32(len(msgs.Messages))
+			if countResult == 0 {
 				break
-			} else {
-				var ids []int64
-				// Помечаем сообщения как прочитаные
-				for _, m := range history {
-					var senderID int64
-					switch m.Sender.GetMessageSenderEnum() {
-					case tdlib.MessageSenderChatType:
-						senderID = m.Sender.(*tdlib.MessageSenderChat).ChatID
-					case tdlib.MessageSenderUserType:
-						senderID = m.Sender.(*tdlib.MessageSenderUser).UserID
-					}
-					if senderID == bot.Profile.User.ID {
-						continue
-					}
-					result = append(result, m)
-					ids = append(ids, m.ID)
-				}
-				_, err := bot.Client.ViewMessages(c.ID, 0, ids, true)
-				if err != nil {
-					bot.Logger.Errorln(err)
-				}
-				c, err = bot.Client.GetChat(c.ID)
-				if err != nil {
-					bot.Logger.Errorln(err)
-					time.Sleep(time.Second * 1)
-				}
 			}
-		}
-	*/
-
-	return result, nil
-}
-
-// Собрать все не прочитаные сообщения. Сообщение загружаются со всех чатов в которых состоит бот
-func (bot *Bot) GetNewMessagesAll(chatLimit int32) ([]tdlib.Message, *tdlib.Error) {
-	var result []tdlib.Message
-	chats, err := bot.GetChatList(chatLimit)
-	if err != nil {
-		return nil, err
-	} else {
-		for _, c := range chats {
-			for c.UnreadCount != 0 {
-				msgs, err := bot.Client.GetChatHistory(c.ID, c.LastReadInboxMessageID, -99, 99, false)
-				history := msgs.Messages[:len(msgs.Messages)-1]
-				if err != nil {
-					bot.Logger.Errorln("Get chat history : ", err)
-					break
-				} else {
-					var ids []int64
-					// Помечаем сообщения как прочитаные
-					for _, m := range history {
-						var senderID int64
-						switch m.Sender.GetMessageSenderEnum() {
-						case tdlib.MessageSenderChatType:
-							senderID = m.Sender.(*tdlib.MessageSenderChat).ChatID
-						case tdlib.MessageSenderUserType:
-							senderID = m.Sender.(*tdlib.MessageSenderUser).UserID
-						}
-						if senderID == bot.Profile.User.ID {
-							continue
-						}
-						result = append(result, m)
-						ids = append(ids, m.ID)
-					}
-					_, err := bot.Client.ViewMessages(c.ID, 0, ids, true)
-					if err != nil {
-						bot.Logger.Errorln(err)
-					}
-					c, err = bot.Client.GetChat(c.ID)
-					if err != nil {
-						bot.Logger.Errorln(err)
-						time.Sleep(time.Second * 1)
-					}
+			// Помечаем сообщения как прочитаные
+			//for _, m := range msgs.Messages[:countResult-1] {
+			for _, m := range msgs.Messages {
+				// Если установлен timestamp то проверяем дату сообщения
+				if (timestamp != 0 && timestamp > m.Date) || m.ID == lastMessageID {
+					bot.Client.ViewMessages(chat.ID, 0, ids, true)
+					return result, nil
 				}
+				var senderID int64
+				switch m.Sender.GetMessageSenderEnum() {
+				case tdlib.MessageSenderChatType:
+					senderID = m.Sender.(*tdlib.MessageSenderChat).ChatID
+				case tdlib.MessageSenderUserType:
+					senderID = m.Sender.(*tdlib.MessageSenderUser).UserID
+				}
+				if senderID == bot.Profile.User.ID {
+					continue
+				}
+				result = append(result, m)
+				ids = append(ids, m.ID)
 			}
-			time.Sleep(time.Second * 2)
+			_, err := bot.Client.ViewMessages(chat.ID, 0, ids, true)
+			if err != nil {
+				bot.Logger.Errorln(err)
+			}
+			chat, err = bot.Client.GetChat(chat.ID)
+			if err != nil {
+				return nil, err.(*tdlib.Error)
+				//bot.Logger.Errorln(err)
+				//time.Sleep(time.Second * 1)
+			}
+			fromMessageID = msgs.Messages[countResult-1].ID
 		}
-
 	}
+	//time.Sleep(time.Second * 2)
+	//	}
+
+	//}
 
 	return result, nil
 }
 
+// TODO: доработать что бы всю историю загружал
 // Собрать не прочитаные сообщения. Сообщение загружаются со всех чатов в которых состоит бот
 // @chatLimit - максимальное количество обрабатываемых чатов
 // @msgLimit - максималькое количество сообщений. Максимум 100
-func (bot *Bot) GetNewMessages(chatLimit int, msgLimit int32) ([]tdlib.Message, *tdlib.Error) {
+func (bot *Bot) GetUnreadMessages111(chatLimit int, msgLimit int32) ([]tdlib.Message, *tdlib.Error) {
 	var result []tdlib.Message
 	var chatCount int
 	chats, err := bot.GetChatList(500)
@@ -156,6 +128,7 @@ func (bot *Bot) GetNewMessages(chatLimit int, msgLimit int32) ([]tdlib.Message, 
 			if c.UnreadCount == 0 {
 				continue
 			}
+
 			msgs, err := bot.Client.GetChatHistory(c.ID, c.LastReadInboxMessageID, -msgLimit, msgLimit, false)
 			if err != nil {
 				return nil, err.(*tdlib.Error)
@@ -204,9 +177,8 @@ func (bot *Bot) GetNewMessages(chatLimit int, msgLimit int32) ([]tdlib.Message, 
 	return result, nil
 }
 
-// Прочитать сообщения из чата
+// Получить последнее сообщение в чате
 // @chat - целевой чат
-// @msgLimit - максималькое количество сообщений. Максимум 100
 func (bot *Bot) GetLastMessage(chat *tdlib.Chat) (*tdlib.Message, *tdlib.Error) {
 	//var result []tdlib.Message
 	if chat == nil || chat.LastMessage == nil {
@@ -220,27 +192,6 @@ func (bot *Bot) GetLastMessage(chat *tdlib.Chat) (*tdlib.Message, *tdlib.Error) 
 		return nil, tdlib.NewError(ErrorCodeSystem, "BOT_SYSTEM_ERROR", "No message")
 	}
 	msg := msgs.Messages[0]
-
-	//fmt.Println("LEN", len(msgs.Messages))
-	//history := msgs.Messages[:len(msgs.Messages)-1]
-	/*
-		var ids []int64
-		// Помечаем сообщения как прочитаные
-		for _, m := range msgs.Messages {
-			var senderID int64
-			switch m.Sender.GetMessageSenderEnum() {
-			case tdlib.MessageSenderChatType:
-				senderID = m.Sender.(*tdlib.MessageSenderChat).ChatID
-			case tdlib.MessageSenderUserType:
-				senderID = m.Sender.(*tdlib.MessageSenderUser).UserID
-			}
-			if senderID == bot.Profile.User.ID {
-				continue
-			}
-			result = append(result, m)
-			ids = append(ids, m.ID)
-		}
-	*/
 	// Помечаем сообщения как прочитаные
 	_, err = bot.Client.ViewMessages(chat.ID, 0, []int64{msg.ID}, true)
 	if err != nil {
@@ -436,6 +387,7 @@ func (bot *Bot) GetChatFullInfo(cid int64) (*chat.Chat, *tdlib.Error) {
 		return nil, err.(*tdlib.Error)
 	}
 
+	var result *chat.Chat
 	switch chatInfo.Type.GetChatTypeEnum() {
 	case tdlib.ChatTypeBasicGroupType:
 		group, err := bot.Client.GetBasicGroup(chatInfo.Type.(*tdlib.ChatTypeBasicGroup).BasicGroupID)
@@ -443,25 +395,25 @@ func (bot *Bot) GetChatFullInfo(cid int64) (*chat.Chat, *tdlib.Error) {
 			return nil, err.(*tdlib.Error)
 		}
 
-		chat := chat.New(chatInfo.ID, chatInfo.Title, "", chat.TypeGroup)
-		chat.DateCreation = 0
-		chat.HasLinkedChat = false
-		chat.IsScam = false
-		chat.IsVerified = false
-		chat.MemberCount = group.MemberCount
+		result = chat.New(chatInfo.ID, chatInfo.Title, "", chat.TypeGroup)
+		result.DateCreation = 0
+		result.HasLinkedChat = false
+		result.IsScam = false
+		result.IsVerified = false
+		result.MemberCount = group.MemberCount
 
 		//Не корректно отображает дату последнего сообщения
 		if chatInfo.LastMessage != nil {
-			chat.DateLastMessage = chatInfo.LastMessage.Date
+			result.DateLastMessage = chatInfo.LastMessage.Date
 		}
 
 		// get caht description
 		f, err := bot.Client.GetBasicGroupFullInfo(group.ID)
 		if err == nil {
-			chat.BIO = f.Description
+			result.BIO = f.Description
 		}
 
-		return chat, nil
+		//return chat, nil
 
 	case tdlib.ChatTypeSupergroupType:
 		//supergroup
@@ -479,33 +431,33 @@ func (bot *Bot) GetChatFullInfo(cid int64) (*chat.Chat, *tdlib.Error) {
 		//bot.Logger.Infof("FULL CHAT :\n%#v\n\n", superGroup)
 		//bot.Logger.Infof("Sender :\n%#v\n\n", chatInfo.LastMessage.Date)
 
-		chat := chat.New(chatInfo.ID, chatInfo.Title, superGroup.Usernames.EditableUsername, chatType)
-		chat.DateCreation = superGroup.Date
-		chat.HasLinkedChat = superGroup.HasLinkedChat
-		chat.IsScam = superGroup.IsScam
-		chat.IsVerified = superGroup.IsVerified
-		chat.MemberCount = superGroup.MemberCount
+		result = chat.New(chatInfo.ID, chatInfo.Title, superGroup.Usernames.EditableUsername, chatType)
+		result.DateCreation = superGroup.Date
+		result.HasLinkedChat = superGroup.HasLinkedChat
+		result.IsScam = superGroup.IsScam
+		result.IsVerified = superGroup.IsVerified
+		result.MemberCount = superGroup.MemberCount
 
 		//Не корректно отображает дату последнего сообщения
 		if chatInfo.LastMessage != nil {
-			chat.DateLastMessage = chatInfo.LastMessage.Date
+			result.DateLastMessage = chatInfo.LastMessage.Date
 		}
 
 		// get caht description
 		f, err := bot.Client.GetSupergroupFullInfo(superGroup.ID)
 		if err == nil {
-			chat.BIO = f.Description
+			result.BIO = f.Description
 		}
 
-		return chat, nil
+		//return chat, nil
 
 	case tdlib.ChatTypePrivateType:
 		//user action...
 	default:
 		bot.Logger.Infof("UNKNOWN CHAT TYPE:\n\n%#v\n\n", chatInfo)
 	}
-
-	return nil, nil
+	result.Address = strings.ToLower(result.Address)
+	return result, nil
 }
 
 func (bot *Bot) InviteByUserName(username, chatname string) (int64, *tdlib.Error) {
@@ -1397,18 +1349,18 @@ func (bot *Bot) GetChat(chatname string, join bool) (*tdlib.Chat, *tdlib.Error) 
 				if err != nil {
 					return nil, err.(*tdlib.Error)
 				}
-				if join {
-					_, err := bot.Client.JoinChat(chat.ID)
-					if err != nil {
-						bot.Logger.Errorf("Join to %s error: %s\n", chat.ID, err)
-						return nil, err.(*tdlib.Error)
-					}
-				}
 			}
 		} else {
 			//Получаем группу по ID
 			chat, err = bot.Client.GetChat(cid)
 			if err != nil {
+				return nil, err.(*tdlib.Error)
+			}
+		}
+		if join {
+			_, err := bot.Client.JoinChat(chat.ID)
+			if err != nil {
+				bot.Logger.Errorf("Join to %s error: %s\n", chat.ID, err)
 				return nil, err.(*tdlib.Error)
 			}
 		}
@@ -1502,34 +1454,36 @@ func (bot *Bot) GetCreatedGroups() ([]*tdlib.Chat, *tdlib.Error) {
 }
 
 //GetChatList загрузить список чатов аккаунта
+/*
 func (bot *Bot) GetChatList(limit int32) ([]*tdlib.Chat, *tdlib.Error) {
-	var allChats []*tdlib.Chat
-	var haveFullChatList bool
-	err := bot.getChatList(limit, &allChats, &haveFullChatList)
+	var result []*tdlib.Chat
+	result, err := bot.getChatList(limit, &result)
 
-	return allChats, err
+	return result, err
 }
+*/
 
 // TODO: проверить загружает ли все чаты
-func (bot *Bot) getChatList(limit int32, allChats *[]*tdlib.Chat, haveFullChatList *bool) *tdlib.Error {
+func (bot *Bot) GetChatList(limit int32) ([]*tdlib.Chat, *tdlib.Error) {
 	if !bot.IsRun() {
-		return tdlib.NewError(ErrorCodeWrongData, "BOT_SYSTEM_ERROR", "Bot dying")
+		return nil, tdlib.NewError(ErrorCodeWrongData, "BOT_SYSTEM_ERROR", "Bot dying")
 	}
 	chats, err := bot.Client.GetChats(nil, limit)
 	if err != nil {
-		return err.(*tdlib.Error)
+		return nil, err.(*tdlib.Error)
 	}
 
+	var result []*tdlib.Chat
 	for _, chatID := range chats.ChatIDs {
 		// get chat info from tdlib
 		chat, err := bot.Client.GetChat(chatID)
 		if err == nil {
-			*allChats = append(*allChats, chat)
+			result = append(result, chat)
 		} else {
-			return err.(*tdlib.Error)
+			return nil, err.(*tdlib.Error)
 		}
 	}
-	return nil
+	return result, nil
 }
 
 /*
