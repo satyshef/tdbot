@@ -9,6 +9,7 @@ import (
 	tdc "github.com/satyshef/go-tdlib/client"
 	"github.com/satyshef/go-tdlib/tdlib"
 	"github.com/satyshef/tdbot/chat"
+	"github.com/satyshef/tdbot/profile"
 )
 
 const checkMemberTimeout = 2000 //millisec
@@ -382,7 +383,6 @@ func (bot *Bot) GetChatFullInfo(cid int64) (*chat.Chat, *tdlib.Error) {
 		return nil, tdlib.NewError(ErrorCodeWrongData, "BOT_SYSTEM_ERROR", "Bot dying")
 	}
 	chatInfo, err := bot.Client.GetChat(cid)
-
 	if err != nil {
 		return nil, err.(*tdlib.Error)
 	}
@@ -395,7 +395,7 @@ func (bot *Bot) GetChatFullInfo(cid int64) (*chat.Chat, *tdlib.Error) {
 			return nil, err.(*tdlib.Error)
 		}
 
-		result = chat.New(chatInfo.ID, chatInfo.Title, "", chat.TypeGroup)
+		result = chat.New(chatInfo.ID, chatInfo.Title, "", chat.TypeBasicGroup)
 		result.DateCreation = 0
 		result.HasLinkedChat = false
 		result.IsScam = false
@@ -453,6 +453,7 @@ func (bot *Bot) GetChatFullInfo(cid int64) (*chat.Chat, *tdlib.Error) {
 
 	case tdlib.ChatTypePrivateType:
 		//user action...
+		return nil, tdlib.NewError(ErrorCodeWrongData, "BOT_SYSTEM_ERROR", "Dont supported chat type ChatTypePrivateType")
 	default:
 		bot.Logger.Infof("UNKNOWN CHAT TYPE:\n\n%#v\n\n", chatInfo)
 	}
@@ -558,7 +559,7 @@ func (bot *Bot) InviteByUserNameTest(username, chatname string) (int64, *tdlib.E
 			bot.Logger.Debugf("Invite user %s - %s", username, e.Message)
 			return 0, e
 		}
-		_, e := bot.AddContact(userChat.ID, username, "")
+		_, e := bot.AddContactByID(userChat.ID, username, "")
 		if e != nil {
 			return 0, e
 		}
@@ -627,7 +628,7 @@ func (bot *Bot) InviteByName(name string, userID int64, chatNameSource, chatName
 			return 0, e
 		}
 	*/
-	_, e = bot.AddContact(uid, name, "")
+	_, e = bot.AddContactByID(uid, name, "")
 	if e != nil {
 		return 0, e
 	}
@@ -782,17 +783,50 @@ func (bot *Bot) GetUserByPhone(phone string) (*tdlib.User, *tdlib.Error) {
 	if !bot.IsRun() {
 		return nil, tdlib.NewError(ErrorCodeWrongData, "BOT_SYSTEM_ERROR", "Bot dying")
 	}
+
+	firstName := profile.RandomString(5)
+	lastName := profile.RandomString(7)
 	//проверить существование пользователя
-	userID, importErr := bot.ImportContact(phone, phone, "")
+	userID, importErr := bot.ImportContact(phone, firstName, lastName)
 	// ErrorUserExists пользователь есть в контактах
 	if importErr != nil && importErr.Code != ErrorCodeContactDuplicate {
 		return nil, importErr
 	}
+	bot.Client.RemoveContacts([]int64{userID})
 	u, err := bot.Client.GetUser(userID)
 	if err != nil {
 		return nil, err.(*tdlib.Error)
 	}
 	return u, nil
+}
+
+//Получить полную информацию о пользователях по списку телефонов
+// @uid - ID пользователя
+// @chatName - имя чата в которой находится пользователь
+func (bot *Bot) GetUserByPhones(phones []string) ([]*tdlib.User, *tdlib.Error) {
+	if !bot.IsRun() {
+		return nil, tdlib.NewError(ErrorCodeWrongData, "BOT_SYSTEM_ERROR", "Bot dying")
+	}
+	//проверить существование пользователя
+	userIDs, importErr := bot.ImportContacts(phones)
+	// ErrorUserExists пользователь есть в контактах
+	if len(userIDs) == 0 {
+		return nil, tdlib.NewError(ErrorCodeUserNotExists, "BOT_USER_NOT_EXISTS", "Users not exists")
+	}
+	if importErr != nil && importErr.Code != ErrorCodeContactDuplicate {
+		return nil, importErr
+	}
+
+	var result []*tdlib.User
+
+	for _, userID := range userIDs {
+		u, err := bot.Client.GetUser(userID)
+		if err == nil {
+			result = append(result, u)
+			time.Sleep(time.Second * 1)
+		}
+	}
+	return result, nil
 }
 
 // Отправить сообщение участникам группы
@@ -1084,11 +1118,44 @@ func (bot *Bot) ImportContact(phone, firstname, lastname string) (int64, *tdlib.
 	return result.UserIDs[0], nil
 }
 
-// AddContact добавить контакт НЕ РАБОТАЕТ!!!!!
+// ImortContacts импортировать список телефонов
+// @phones Номера телефонов пользователей
+func (bot *Bot) ImportContacts(phones []string) ([]int64, *tdlib.Error) {
+	if !bot.IsRun() {
+		return nil, tdlib.NewError(ErrorCodeWrongData, "BOT_SYSTEM_ERROR", "Bot dying")
+	}
+	if len(phones) == 0 {
+		return nil, tdlib.NewError(ErrorCodeWrongData, "BOT_WRONG_DATA", "Empty phones list")
+	}
+
+	var contacts []tdlib.Contact
+
+	for _, phone := range phones {
+		phone = strings.Trim(phone, "\n\t\r ,-:")
+		if phone == "" {
+			continue
+		}
+		contact := tdlib.Contact{}
+		contact.FirstName = phone
+		contact.LastName = ""
+		contact.PhoneNumber = phone
+		contacts = append(contacts, contact)
+	}
+
+	result, err := bot.Client.ImportContacts(contacts)
+	if err != nil {
+		return nil, tdlib.NewError(ErrorCodeSystem, "BOT_SYSTEM_ERROR", err.Error())
+	}
+
+	//bot.Logger.Debugf("Contact %s import success. User ID : %d\n", phone, result.UserIDs[0])
+	return result.UserIDs, nil
+}
+
+// AddContact добавить контакт по ID. РАБОТАЕТ если пользователь предварительно был найден
 // @uid id пользователя
 // @firstname Имя пользователя
 // @lastname Фамилия пользователя
-func (bot *Bot) AddContact(uid int64, firstname, lastname string) (int64, *tdlib.Error) {
+func (bot *Bot) AddContactByID(uid int64, firstname, lastname string) (int64, *tdlib.Error) {
 	if !bot.IsRun() {
 		return 0, tdlib.NewError(ErrorCodeWrongData, "BOT_SYSTEM_ERROR", "Bot dying")
 	}
@@ -1117,6 +1184,43 @@ func (bot *Bot) AddContact(uid int64, firstname, lastname string) (int64, *tdlib
 
 	bot.Logger.Debugf("Пользователь %d успешно добавлен в контакты", uid)
 	return uid, nil
+}
+
+// AddContact добавить в контакты по номеру телефона
+// @uid id пользователя
+// @firstname Имя пользователя
+// @lastname Фамилия пользователя
+func (bot *Bot) AddContactByPhone(phone string, firstname, lastname string) (int64, *tdlib.Error) {
+	if !bot.IsRun() {
+		return 0, tdlib.NewError(ErrorCodeWrongData, "BOT_SYSTEM_ERROR", "Bot dying")
+	}
+	if phone == "" {
+		return 0, tdlib.NewError(ErrorCodeWrongData, "Empty phone number", "")
+	}
+
+	if firstname == "" {
+		return 0, tdlib.NewError(ErrorCodeWrongData, "Empty first name", "")
+	}
+
+	contact := tdlib.Contact{}
+	contact.FirstName = firstname
+	contact.LastName = lastname
+	contact.PhoneNumber = phone
+
+	_, err := bot.Client.AddContact(&contact, true)
+	if err != nil {
+		return 0, err.(*tdlib.Error)
+	}
+
+	if err != nil {
+		bot.Logger.Error(err)
+		return 0, tdlib.NewError(ErrorCodeUserNotExists, "Error", err.Error())
+	}
+
+	bot.Logger.Debugf("Пользователь %s успешно добавлен в контакты", phone)
+
+	//Сделать получение ID
+	return 0, nil
 }
 
 // SendMessageByPhone отправить сообщение пользователю по номеру телефона

@@ -42,7 +42,9 @@ const (
 	TypePrivateChannel Type = "private_channel"
 	TypeGroup          Type = "group"
 	TypePrivateGroup   Type = "private_group"
+	TypeBasicGroup     Type = "basic_group"
 	TypeUser           Type = "user"
+	TypeUserBot        Type = "user_bot"
 	TypeBot            Type = "bot"
 )
 
