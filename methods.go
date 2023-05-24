@@ -386,16 +386,15 @@ func (bot *Bot) GetChatFullInfo(cid int64) (*chat.Chat, *tdlib.Error) {
 	if err != nil {
 		return nil, err.(*tdlib.Error)
 	}
-
 	var result *chat.Chat
+	chatType := GetChatType(chatInfo)
 	switch chatInfo.Type.GetChatTypeEnum() {
 	case tdlib.ChatTypeBasicGroupType:
 		group, err := bot.Client.GetBasicGroup(chatInfo.Type.(*tdlib.ChatTypeBasicGroup).BasicGroupID)
 		if err != nil {
 			return nil, err.(*tdlib.Error)
 		}
-
-		result = chat.New(chatInfo.ID, chatInfo.Title, "", chat.TypeBasicGroup)
+		result = chat.New(chatInfo.ID, chatInfo.Title, "", chatType)
 		result.DateCreation = 0
 		result.HasLinkedChat = false
 		result.IsScam = false
@@ -413,24 +412,12 @@ func (bot *Bot) GetChatFullInfo(cid int64) (*chat.Chat, *tdlib.Error) {
 			result.BIO = f.Description
 		}
 
-		//return chat, nil
-
 	case tdlib.ChatTypeSupergroupType:
 		//supergroup
-		var chatType chat.Type
 		superGroup, err := bot.Client.GetSupergroup(chatInfo.Type.(*tdlib.ChatTypeSupergroup).SupergroupID)
 		if err != nil {
 			return nil, err.(*tdlib.Error)
 		}
-		if superGroup.IsChannel {
-			chatType = chat.TypeChannel
-		} else {
-			chatType = chat.TypeGroup
-		}
-
-		//bot.Logger.Infof("FULL CHAT :\n%#v\n\n", superGroup)
-		//bot.Logger.Infof("Sender :\n%#v\n\n", chatInfo.LastMessage.Date)
-
 		result = chat.New(chatInfo.ID, chatInfo.Title, superGroup.Usernames.EditableUsername, chatType)
 		result.DateCreation = superGroup.Date
 		result.HasLinkedChat = superGroup.HasLinkedChat
@@ -449,11 +436,10 @@ func (bot *Bot) GetChatFullInfo(cid int64) (*chat.Chat, *tdlib.Error) {
 			result.BIO = f.Description
 		}
 
-		//return chat, nil
-
 	case tdlib.ChatTypePrivateType:
 		//user action...
 		return nil, tdlib.NewError(ErrorCodeWrongData, "BOT_SYSTEM_ERROR", "Dont supported chat type ChatTypePrivateType")
+
 	default:
 		bot.Logger.Infof("UNKNOWN CHAT TYPE:\n\n%#v\n\n", chatInfo)
 	}
@@ -1433,6 +1419,9 @@ func (bot *Bot) GetChat(chatname string, join bool) (*tdlib.Chat, *tdlib.Error) 
 		}
 	} else {
 
+		chatname = strings.ReplaceAll(chatname, "https://t.me/", "")
+		chatname = strings.ReplaceAll(chatname, "t.me/", "")
+		chatname = strings.ReplaceAll(chatname, "@", "")
 		//Если chatID == int64 тогда ищем чат по id иначе по имени
 		cid, err := strconv.ParseInt(chatname, 10, 64)
 		if err != nil {

@@ -163,6 +163,13 @@ func (bot *Bot) Start() *tdlib.Error {
 		return err
 	}
 
+	//TODO: получаем список чатов. Используем для смены паттерна поведения. Создать метод в пакете mimicry
+	//bot.Client.GetRecentlyOpenedChats(2)
+	// c, err :=bot.GetChatList(10)
+	// if err != nil {
+	//
+	// }
+
 	// получаем инфу об аккаунте
 	var me *user.User
 	if me, err = bot.GetMe(true); err != nil || me.ID == 0 {

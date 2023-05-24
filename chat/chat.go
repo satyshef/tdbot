@@ -43,7 +43,8 @@ const (
 	TypeGroup          Type = "group"
 	TypePrivateGroup   Type = "private_group"
 	TypeBasicGroup     Type = "basic_group"
-	TypeUser           Type = "user"
+	TypeChat           Type = "chat" //не определенного типа
+	TypePrivate        Type = "private"
 	TypeUserBot        Type = "user_bot"
 	TypeBot            Type = "bot"
 )
