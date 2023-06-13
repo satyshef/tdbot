@@ -28,7 +28,7 @@ type (
 	}
 )
 
-//New Инициализация бота
+// New Инициализация бота
 func New(prof *profile.Profile) *Bot {
 
 	if prof == nil {
@@ -104,9 +104,7 @@ func (bot *Bot) init() {
 }
 */
 
-//Start запуск бота
-//
-//
+// Start запуск бота
 func (bot *Bot) Start() *tdlib.Error {
 	if bot == nil {
 		return tdlib.NewError(profile.ErrorCodeNotInit, "BOT_NOT_INIT", "Bot not init")
@@ -207,9 +205,22 @@ func (bot *Bot) Start() *tdlib.Error {
 		_, e = bot.Client.SetOption("online", tdlib.NewOptionValueBoolean(false))
 	}
 	if e != nil {
-		//bot.Stop()
 		return err
 	}
+
+	// Устанавливаем время удаления аккаунта
+	if bot.Profile.Config.APP.AccountTTL != 0 {
+		currentTTL, _ := bot.Client.GetAccountTTL()
+		if currentTTL.Days != bot.Profile.Config.APP.AccountTTL {
+			bot.Logger.Debugln("Set Account TTL : ", bot.Profile.Config.APP.AccountTTL)
+			ttl := tdlib.NewAccountTTL(bot.Profile.Config.APP.AccountTTL)
+			_, e = bot.Client.SetAccountTTL(ttl)
+			if e != nil {
+				return err
+			}
+		}
+	}
+
 	fmt.Printf("\n	Phone : %s\n	UID : %d\n	FirstName : %s\n	LastName : %s\n	UserName : %s\n	WasOnline : %s\n	Location : %s\n\n",
 		bot.Profile.User.PhoneNumber,
 		bot.Profile.User.ID,
@@ -245,7 +256,7 @@ func (bot *Bot) Stop() {
 	}
 
 	currentStatus := bot.Status
-	bot.Logger.Infof("Stopping the bot (status %s\n)...", currentStatus)
+	bot.Logger.Infof("Stopping the bot (status %s)...\n", currentStatus)
 	bot.Status = StatusStopping
 	bot.Profile.User.Status = user.StatusStopped
 

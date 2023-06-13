@@ -50,6 +50,7 @@ type (
 		DontRebootInterval int32  `toml:"max_interval"` // интервал при котором не происходит отключение профиля если сработал лимит
 		CheckLimits        bool   `toml:"check_limits"` // проверять лимиты
 		SetOnline          bool   `toml:"set_online"`
+		AccountTTL         int32  `toml:"account_ttl"`
 		DirBanned          string `toml:"banned_dir"`
 		DirLogout          string `toml:"logout_dir"`
 		DirFoul            string `toml:"foul_dir"`
@@ -107,7 +108,7 @@ const (
 	ProxyTypeMtproto = "mtproto"
 )
 
-//New ...
+// New ...
 func New() *Config {
 
 	return &Config{
@@ -125,6 +126,7 @@ func New() *Config {
 			//Mode:               1,
 			CheckLimits:        true,
 			DontRebootInterval: 10,
+			AccountTTL:         365,
 		},
 
 		Log: &Log{
@@ -215,7 +217,7 @@ func (c *Config) Load(paths ...string) error {
 	return err
 }
 
-//Save сохранить конфигурацию
+// Save сохранить конфигурацию
 // @fileName - путь к файлу в который сохраняем
 func (c *Config) Save(fileName string) error {
 	f, err := os.Create(fileName)

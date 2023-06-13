@@ -48,17 +48,13 @@ func (bot *Bot) GetChatHistory(chatID int64, limit int32, fromMessageID int64, t
 }
 
 // Собрать все не прочитаные сообщения.
-func (bot *Bot) GetUnreadMessagesAll(chat *tdlib.Chat, timestamp int32) ([]tdlib.Message, *tdlib.Error) {
+/*
+func (bot *Bot) GetUnreadMessagesAll_1(chat *tdlib.Chat, timestamp int32) ([]tdlib.Message, *tdlib.Error) {
 	var result []tdlib.Message
 	var fromMessageID int64
 	var countResult int32
 	lastMessageID := chat.LastReadInboxMessageID
 
-	// chats, err := bot.GetChatList(chatLimit)
-	// if err != nil {
-	// 	return nil, err
-	// } else {
-	// 	for _, c := range chats {
 	for chat.UnreadCount != 0 {
 		msgs, err := bot.Client.GetChatHistory(chat.ID, fromMessageID, 0, 99, false)
 		if err != nil {
@@ -71,7 +67,6 @@ func (bot *Bot) GetUnreadMessagesAll(chat *tdlib.Chat, timestamp int32) ([]tdlib
 				break
 			}
 			// Помечаем сообщения как прочитаные
-			//for _, m := range msgs.Messages[:countResult-1] {
 			for _, m := range msgs.Messages {
 				// Если установлен timestamp то проверяем дату сообщения
 				if (timestamp != 0 && timestamp > m.Date) || m.ID == lastMessageID {
@@ -104,12 +99,67 @@ func (bot *Bot) GetUnreadMessagesAll(chat *tdlib.Chat, timestamp int32) ([]tdlib
 			fromMessageID = msgs.Messages[countResult-1].ID
 		}
 	}
-	//time.Sleep(time.Second * 2)
-	//	}
+	return result, nil
+}
+*/
+func (bot *Bot) GetUnreadMessagesAll(chat *tdlib.Chat, timestamp int32) ([]tdlib.Message, *tdlib.Error) {
+	var result []tdlib.Message
+	var fromMessageID int64
+	lastMessageID := chat.LastReadInboxMessageID
 
-	//}
+	for chat.UnreadCount != 0 {
+		msgs, err := bot.Client.GetChatHistory(chat.ID, fromMessageID, 0, 99, false)
+		if err != nil {
+			bot.Logger.Errorln("Get chat history: ", err)
+			break
+		}
+
+		countResult := int32(len(msgs.Messages))
+		if countResult == 0 {
+			break
+		}
+
+		var ids []int64
+		for _, m := range msgs.Messages {
+			if (timestamp != 0 && timestamp > m.Date) || m.ID == lastMessageID {
+				bot.Client.ViewMessages(chat.ID, 0, ids, true)
+				return result, nil
+			}
+
+			senderID := getSenderID(m.Sender)
+			if senderID == bot.Profile.User.ID {
+				continue
+			}
+
+			result = append(result, m)
+			ids = append(ids, m.ID)
+		}
+
+		_, err = bot.Client.ViewMessages(chat.ID, 0, ids, true)
+		if err != nil {
+			bot.Logger.Errorln(err)
+		}
+
+		chat, err = bot.Client.GetChat(chat.ID)
+		if err != nil {
+			return nil, err.(*tdlib.Error)
+		}
+
+		fromMessageID = msgs.Messages[countResult-1].ID
+	}
 
 	return result, nil
+}
+
+func getSenderID(sender tdlib.MessageSender) int64 {
+	switch sender.GetMessageSenderEnum() {
+	case tdlib.MessageSenderChatType:
+		return sender.(*tdlib.MessageSenderChat).ChatID
+	case tdlib.MessageSenderUserType:
+		return sender.(*tdlib.MessageSenderUser).UserID
+	default:
+		return 0
+	}
 }
 
 // TODO: доработать что бы всю историю загружал
@@ -145,13 +195,7 @@ func (bot *Bot) GetUnreadMessages111(chatLimit int, msgLimit int32) ([]tdlib.Mes
 				var ids []int64
 				// Помечаем сообщения как прочитаные
 				for _, m := range history {
-					var senderID int64
-					switch m.Sender.GetMessageSenderEnum() {
-					case tdlib.MessageSenderChatType:
-						senderID = m.Sender.(*tdlib.MessageSenderChat).ChatID
-					case tdlib.MessageSenderUserType:
-						senderID = m.Sender.(*tdlib.MessageSenderUser).UserID
-					}
+					senderID := getSenderID(m.Sender)
 					if senderID == bot.Profile.User.ID {
 						continue
 					}
@@ -734,7 +778,7 @@ func (bot *Bot) CheckMember(cid, uid, timeout int64) *tdlib.Error {
 	return nil
 }
 
-//Получить полную информацию о пользователе. Переделать что бы брать инфу по username!!!
+// Получить полную информацию о пользователе. Переделать что бы брать инфу по username!!!
 // @uid - ID пользователя
 // @chatName - имя чата в которой находится пользователь
 func (bot *Bot) GetUser(userID string) (*tdlib.User, *tdlib.Error) {
@@ -762,7 +806,7 @@ func (bot *Bot) GetUser(userID string) (*tdlib.User, *tdlib.Error) {
 	return u, nil
 }
 
-//Получить полную информацию о пользователе по его номеру телефона.
+// Получить полную информацию о пользователе по его номеру телефона.
 // @uid - ID пользователя
 // @chatName - имя чата в которой находится пользователь
 func (bot *Bot) GetUserByPhone(phone string) (*tdlib.User, *tdlib.Error) {
@@ -786,7 +830,7 @@ func (bot *Bot) GetUserByPhone(phone string) (*tdlib.User, *tdlib.Error) {
 	return u, nil
 }
 
-//Получить полную информацию о пользователях по списку телефонов
+// Получить полную информацию о пользователях по списку телефонов
 // @uid - ID пользователя
 // @chatName - имя чата в которой находится пользователь
 func (bot *Bot) GetUserByPhones(phones []string) ([]*tdlib.User, *tdlib.Error) {
@@ -1384,7 +1428,7 @@ func (bot *Bot) WaitMessageState(msg *tdlib.Message) *tdlib.Error {
 	return nil
 }
 
-//Загрузить информацию о чате
+// Загрузить информацию о чате
 // @chatID - идентификатор чата, может быть имя чата, ссылка на него, chat id
 func (bot *Bot) GetChat(chatname string, join bool) (*tdlib.Chat, *tdlib.Error) {
 	if !bot.IsRun() {
