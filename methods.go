@@ -1623,52 +1623,34 @@ func (bot *Bot) GetChatList(limit int32) ([]*tdlib.Chat, *tdlib.Error) {
 	return result, nil
 }
 
-/*
-func (bot *Bot) getChatList(limit int, allChats *[]*tdlib.Chat, haveFullChatList *bool) *tdlib.Error {
-	if !bot.IsRun() {
-		return tdlib.NewError(ErrorCodeWrongData, "BOT_SYSTEM_ERROR", "Bot dying")
-	}
-	if !*haveFullChatList && limit > len(*allChats) {
-		offsetOrder := int64(math.MaxInt64)
-		offsetChatID := int64(0)
-		//var chatList = tdlib.NewChatListMain()
-		var lastChat *tdlib.Chat
+func (bot *Bot) LeaveChatList(chats []*tdlib.Chat, limit int32) *tdlib.Error {
+	var current int32
+	var e error
+	for _, c := range chats {
+		if current >= limit {
+			break
+		}
+		//fmt.Printf("Leave Chat error %#v\n", c.Permissions.CanChangeInfo)
+		if !c.Permissions.CanChangeInfo {
 
-		if len(*allChats) > 0 {
-			tChats := *allChats
-			lastChat = tChats[len(tChats)-1]
-			for i := 0; i < len(lastChat.Positions); i++ {
-				//Find the main chat list
-				if lastChat.Positions[i].List.GetChatListEnum() == tdlib.ChatListMainType {
-					offsetOrder = int64(lastChat.Positions[i].Order)
-				}
+			switch c.Type.GetChatTypeEnum() {
+			case tdlib.ChatTypePrivateType:
+				continue
+			case tdlib.ChatTypeBasicGroupType:
+				_, e = bot.Client.DeleteChat(c.ID)
+			case tdlib.ChatTypeSupergroupType:
+				_, e = bot.Client.LeaveChat(c.ID)
+			default:
+				e = fmt.Errorf("Unknown chat type")
 			}
-			offsetChatID = lastChat.ID
-		}
-
-		// get chats (ids) from tdlib
-		currentLimit := int32(limit - len(*allChats))
-		chats, err := bot.Client.GetChats(nil, tdlib.JSONInt64(offsetOrder), offsetChatID, currentLimit)
-		if err != nil {
-			return err.(*tdlib.Error)
-		}
-
-		for _, chatID := range chats.ChatIDs {
-			// get chat info from tdlib
-			chat, err := bot.Client.GetChat(chatID)
-			if err == nil {
-				*allChats = append(*allChats, chat)
+			if e != nil {
+				fmt.Println("Leave Chat error ", e)
 			} else {
-				return err.(*tdlib.Error)
+				current++
 			}
 		}
 
-		if int32(len(chats.ChatIDs)) < currentLimit {
-			*haveFullChatList = true
-			return nil
-		}
-		return bot.getChatList(limit, allChats, haveFullChatList)
 	}
+
 	return nil
 }
-*/
