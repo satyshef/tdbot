@@ -430,6 +430,7 @@ func (bot *Bot) GetChatFullInfo(cid int64) (*chat.Chat, *tdlib.Error) {
 	if err != nil {
 		return nil, err.(*tdlib.Error)
 	}
+
 	var result *chat.Chat
 	chatType := GetChatType(chatInfo)
 	switch chatInfo.Type.GetChatTypeEnum() {
@@ -486,6 +487,9 @@ func (bot *Bot) GetChatFullInfo(cid int64) (*chat.Chat, *tdlib.Error) {
 
 	default:
 		bot.Logger.Infof("UNKNOWN CHAT TYPE:\n\n%#v\n\n", chatInfo)
+	}
+	if len(chatInfo.Positions) != 0 {
+		result.Joined = true
 	}
 	result.Address = strings.ToLower(result.Address)
 	return result, nil
@@ -1600,7 +1604,8 @@ func (bot *Bot) GetChatList(limit int32) ([]*tdlib.Chat, *tdlib.Error) {
 }
 */
 
-// TODO: проверить загружает ли все чаты
+// Получаем список чатов аккаунта. Результат записываем в bot.Chats и возвращаем в ответ
+// TODO: проверить загружает ли все чаты. Обдумать нужно ли возвращать список
 func (bot *Bot) GetChatList(limit int32) ([]*tdlib.Chat, *tdlib.Error) {
 	if !bot.IsRun() {
 		return nil, tdlib.NewError(ErrorCodeWrongData, "BOT_SYSTEM_ERROR", "Bot dying")

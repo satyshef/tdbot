@@ -28,6 +28,7 @@ type Chat struct {
 	DateLastMessage int32
 	IsVerified      bool
 	IsScam          bool
+	Joined          bool
 	HasLinkedChat   bool
 	Admins          []string
 	BIO             string

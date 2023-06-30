@@ -24,7 +24,6 @@ type (
 		InputChan chan string
 		StopWork  chan bool
 		wg        sync.WaitGroup
-		//PrivateChan *tdlib.Chat
 	}
 )
 
@@ -115,33 +114,23 @@ func (bot *Bot) Start() *tdlib.Error {
 
 	bot.Logger.Infoln("Starting the bot [MASTER VERSION]...")
 
-	//bot.Profile.Reload()
-
-	// TODO: test. Проверяем корректность работы без перазагрузки профиля
-	/*
-		if err := bot.Profile.Reload(); err != nil {
-			return tdlib.NewError(profile.ErrorCodeNotInit, "PROFILE_NOT_INIT", err.Error())
-		}
-	*/
-
 	bot.Status = StatusInit
 	bot.Profile.User.Status = user.StatusInitialization
 	//fmt.Println("Log ", bot.Logger.Level)
-	bot.Logger.Infoln("Add handler ...")
+
 	//добавляем встроенный обработчик событий
+	bot.Logger.Infoln("Add handler ...")
 	bot.Client.AddEventHandler(bot.eventCatcher)
 	bot.Logger.Infoln("Handler OK")
 
 	//запуск горутины принимающей обновления телеграм
-	//bot.Client.Run()
 	bot.Logger.Infoln("Starting client")
 	if err := bot.Client.Run(); err != nil {
 		fmt.Println("Start error :", err)
-		//bot.Logger.Errorf("Client Start Error : %#v\n", err)
 		bot.Stop()
 		return err.(*tdlib.Error)
 	}
-	//bot.Logger.Infoln("STATUS :", bot.Status)
+
 	bot.Logger.Infoln("Client OK")
 	// TODO: реализовать адекватное поведение системы если работа клиента прервалась из вне
 	bot.Logger.Infoln("Init proxy ...")
@@ -153,20 +142,13 @@ func (bot *Bot) Start() *tdlib.Error {
 		}
 		bot.Stop()
 	}
-	// bot authorization
+
 	// TODO: тестовое отключение STOP
 	err = bot.AuthBot() //2
 	if err != nil {
 		//bot.Stop()
 		return err
 	}
-
-	//TODO: получаем список чатов. Используем для смены паттерна поведения. Создать метод в пакете mimicry
-	//bot.Client.GetRecentlyOpenedChats(2)
-	// c, err :=bot.GetChatList(10)
-	// if err != nil {
-	//
-	// }
 
 	// получаем инфу об аккаунте
 	var me *user.User
@@ -243,6 +225,7 @@ func (bot *Bot) Start() *tdlib.Error {
 	bot.Profile.User.Status = user.StatusReady
 	ev := tdc.NewEvent(tdc.EventTypeResponse, EventNameBotReady, 0, "")
 	go bot.Client.PublishEvent(ev)
+
 	<-bot.StopWork
 	return nil
 
