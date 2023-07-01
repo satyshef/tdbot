@@ -190,6 +190,9 @@ func (bot *Bot) Start() *tdlib.Error {
 		return err
 	}
 
+	bot.client.SetOption("ignore_background_updates", tdlib.NewOptionValueBoolean(false))
+	bot.client.SetOption("ignore_sensitive_content_restrictions", tdlib.NewOptionValueBoolean(true))
+
 	// Устанавливаем время удаления аккаунта
 	if bot.Profile.Config.APP.AccountTTL != 0 {
 		currentTTL, _ := bot.client.GetAccountTTL()
