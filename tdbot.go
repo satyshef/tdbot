@@ -17,7 +17,7 @@ import (
 
 type (
 	Bot struct {
-		Client    *tdc.Client
+		client    *tdc.Client
 		Logger    *logrus.Logger
 		Profile   *profile.Profile
 		Status    botStatus
@@ -37,7 +37,7 @@ func New(prof *profile.Profile) *Bot {
 	log := initLog(prof.Config.Log)
 	tgClient := initClient(prof)
 	bot := &Bot{
-		Client:    tgClient,
+		client:    tgClient,
 		Profile:   prof,
 		Logger:    log,
 		Status:    StatusStopped,
@@ -48,7 +48,7 @@ func New(prof *profile.Profile) *Bot {
 		time.Sleep(time.Millisecond * 100)
 		bot.Logger.Infoln("Add handler ...")
 		//добавляем встроенный обработчик событий
-		bot.Client.AddEventHandler(bot.eventCatcher)
+		bot.client.AddEventHandler(bot.eventCatcher)
 		bot.Logger.Infoln("Handler OK")
 	*/
 	return bot
@@ -81,14 +81,14 @@ func initClient(prof *profile.Profile) *tdc.Client {
 }
 
 func (bot *Bot) destroyClient() {
-	if bot.Client == nil {
+	if bot.client == nil {
 		bot.Logger.Errorln("Client not init")
 		return
 	}
-	//C.td_json_client_destroy(bot.Client)
-	bot.Client.Stop()
+	//C.td_json_client_destroy(bot.client)
+	bot.client.Stop()
 	//time.Sleep(time.Second * 5)
-	//bot.Client = nil
+	//bot.client = nil
 }
 
 func initLog(c *config.Log) *logrus.Logger {
@@ -120,12 +120,12 @@ func (bot *Bot) Start() *tdlib.Error {
 
 	//добавляем встроенный обработчик событий
 	bot.Logger.Infoln("Add handler ...")
-	bot.Client.AddEventHandler(bot.eventCatcher)
+	bot.client.AddEventHandler(bot.eventCatcher)
 	bot.Logger.Infoln("Handler OK")
 
 	//запуск горутины принимающей обновления телеграм
 	bot.Logger.Infoln("Starting client")
-	if err := bot.Client.Run(); err != nil {
+	if err := bot.client.Run(); err != nil {
 		fmt.Println("Start error :", err)
 		bot.Stop()
 		return err.(*tdlib.Error)
@@ -182,9 +182,9 @@ func (bot *Bot) Start() *tdlib.Error {
 	// Установить статус online
 	var e error
 	if bot.Profile.Config.APP.SetOnline {
-		_, e = bot.Client.SetOption("online", tdlib.NewOptionValueBoolean(true))
+		_, e = bot.client.SetOption("online", tdlib.NewOptionValueBoolean(true))
 	} else {
-		_, e = bot.Client.SetOption("online", tdlib.NewOptionValueBoolean(false))
+		_, e = bot.client.SetOption("online", tdlib.NewOptionValueBoolean(false))
 	}
 	if e != nil {
 		return err
@@ -192,11 +192,11 @@ func (bot *Bot) Start() *tdlib.Error {
 
 	// Устанавливаем время удаления аккаунта
 	if bot.Profile.Config.APP.AccountTTL != 0 {
-		currentTTL, _ := bot.Client.GetAccountTTL()
+		currentTTL, _ := bot.client.GetAccountTTL()
 		if currentTTL.Days != bot.Profile.Config.APP.AccountTTL {
 			bot.Logger.Debugln("Set Account TTL : ", bot.Profile.Config.APP.AccountTTL)
 			ttl := tdlib.NewAccountTTL(bot.Profile.Config.APP.AccountTTL)
-			_, e = bot.Client.SetAccountTTL(ttl)
+			_, e = bot.client.SetAccountTTL(ttl)
 			if e != nil {
 				return err
 			}
@@ -212,7 +212,7 @@ func (bot *Bot) Start() *tdlib.Error {
 		time.Unix(int64(bot.Profile.User.WasOnline), 0),
 		bot.Profile.User.Location,
 	)
-	state, e := bot.Client.GetAuthorizationState()
+	state, e := bot.client.GetAuthorizationState()
 	if e != nil {
 		return e.(*tdlib.Error)
 	}
@@ -224,7 +224,7 @@ func (bot *Bot) Start() *tdlib.Error {
 	bot.Status = StatusReady
 	bot.Profile.User.Status = user.StatusReady
 	ev := tdc.NewEvent(tdc.EventTypeResponse, EventNameBotReady, 0, "")
-	go bot.Client.PublishEvent(ev)
+	go bot.client.PublishEvent(ev)
 
 	<-bot.StopWork
 	return nil
@@ -234,7 +234,7 @@ func (bot *Bot) Start() *tdlib.Error {
 // Stop ...
 func (bot *Bot) Stop() {
 	//if !bot.IsRun() {
-	if bot == nil || bot.Client == nil || bot.Status == StatusStopped || bot.Status == StatusStopping {
+	if bot == nil || bot.client == nil || bot.Status == StatusStopped || bot.Status == StatusStopping {
 		return
 	}
 
@@ -289,8 +289,15 @@ func (bot *Bot) Restart1() {
 }
 
 func (bot *Bot) IsRun() bool {
-	//if bot == nil || bot.Status == StatusStopped || bot.Status == StatusStopping || bot.Client == nil {
-	if bot == nil || bot.Status != StatusReady || bot.Client == nil {
+	//if bot == nil || bot.Status == StatusStopped || bot.Status == StatusStopping || bot.client == nil {
+	if bot == nil || bot.Status != StatusReady || bot.client == nil {
+		return false
+	}
+	return true
+}
+
+func (bot *Bot) IsClientInit() bool {
+	if bot.client == nil {
 		return false
 	}
 	return true
@@ -320,7 +327,7 @@ func (bot *Bot) InitProxy(check bool) *tdlib.Error {
 
 	if bot.Profile.Config.Proxy != nil && !bot.Profile.Config.Proxy.Enable {
 		bot.Logger.Infoln("Disabling Proxies ...")
-		_, err := bot.Client.DisableProxy()
+		_, err := bot.client.DisableProxy()
 		/*
 			//Если установлен параметр disable удаляем все прокси(ОБДУМАТЬ)
 
@@ -358,7 +365,7 @@ func (bot *Bot) InitProxy(check bool) *tdlib.Error {
 				if err.Code == 404 {
 					var e error
 					bot.Logger.Infoln("Add New Proxy")
-					prox, e = bot.Client.AddProxy(bot.Profile.Config.Proxy.Host, bot.Profile.Config.Proxy.Port, true, proxType)
+					prox, e = bot.client.AddProxy(bot.Profile.Config.Proxy.Host, bot.Profile.Config.Proxy.Port, true, proxType)
 					if e != nil {
 						return e.(*tdlib.Error)
 					}
@@ -370,16 +377,16 @@ func (bot *Bot) InitProxy(check bool) *tdlib.Error {
 		*/
 
 		/*
-			proxyList, _ := bot.Client.GetProxies()
+			proxyList, _ := bot.client.GetProxies()
 			fmt.Printf("Proxy List %#v\n", proxyList)
 		*/
 
-		prox, e := bot.Client.AddProxy(bot.Profile.Config.Proxy.Host, bot.Profile.Config.Proxy.Port, true, proxType)
+		prox, e := bot.client.AddProxy(bot.Profile.Config.Proxy.Host, bot.Profile.Config.Proxy.Port, true, proxType)
 		if e != nil {
 			return e.(*tdlib.Error)
 		}
 
-		_, e = bot.Client.EnableProxy(prox.ID)
+		_, e = bot.client.EnableProxy(prox.ID)
 		if e != nil {
 			return e.(*tdlib.Error)
 		}
@@ -388,7 +395,7 @@ func (bot *Bot) InitProxy(check bool) *tdlib.Error {
 		//bot.Logger.Infoln("Proxy ID", prox.ID)
 
 		if check {
-			ping, e := bot.Client.PingProxy(prox.ID)
+			ping, e := bot.client.PingProxy(prox.ID)
 			if e != nil {
 				return e.(*tdlib.Error)
 			}
@@ -404,7 +411,7 @@ func (bot *Bot) InitProxy(check bool) *tdlib.Error {
 // FindProxy проверить есть ли прокси в списке подключенных
 func (bot *Bot) FindProxy(host string, port int32, proxyType tdlib.ProxyType) (*tdlib.Proxy, *tdlib.Error) {
 
-	proxyList, err := bot.Client.GetProxies()
+	proxyList, err := bot.client.GetProxies()
 	//fmt.Printf("Proxy List %#v\n", proxyList)
 	if err != nil {
 		return &tdlib.Proxy{}, err.(*tdlib.Error)
@@ -420,7 +427,7 @@ func (bot *Bot) FindProxy(host string, port int32, proxyType tdlib.ProxyType) (*
 }
 
 func (bot *Bot) RemoveAllProxy() *tdlib.Error {
-	proxyList, err := bot.Client.GetProxies()
+	proxyList, err := bot.client.GetProxies()
 	//fmt.Printf("Proxy List %#v\n", proxyList)
 	if err != nil {
 		return err.(*tdlib.Error)
@@ -428,7 +435,7 @@ func (bot *Bot) RemoveAllProxy() *tdlib.Error {
 
 	for _, pr := range proxyList.Proxies {
 
-		_, err := bot.Client.RemoveProxy(pr.ID)
+		_, err := bot.client.RemoveProxy(pr.ID)
 		if err != nil {
 			return err.(*tdlib.Error)
 		}
@@ -445,7 +452,7 @@ func (bot *Bot) AuthBot() *tdlib.Error {
 			return tdlib.NewError(tdc.ErrorCodeAborted, "CLIENT_ABORTED", "Client authorization interrupted")
 		}
 
-		currentState, err := bot.Client.Authorize()
+		currentState, err := bot.client.Authorize()
 		if err != nil {
 			//bot.Logger.Error("Authorization error : ", err)
 			return err.(*tdlib.Error)
@@ -486,7 +493,7 @@ func (bot *Bot) AuthBot() *tdlib.Error {
 			//bot.Profile.User.Status = user.StatusSendPhone
 			bot.Logger.Infoln("Send phone ...")
 
-			if _, err := bot.Client.SendPhoneNumber(bot.Profile.User.PhoneNumber); err != nil {
+			if _, err := bot.client.SendPhoneNumber(bot.Profile.User.PhoneNumber); err != nil {
 				//bot.Logger.Errorf("SEND PHONE ERROR : %#v\n", err.(*tdlib.Error))
 				//fmt.Printf("SEND PHONE ERROR (user status %s): %s\n", bot.Profile.User.Status, err.Error())
 				return err.(*tdlib.Error)
@@ -504,7 +511,7 @@ func (bot *Bot) AuthBot() *tdlib.Error {
 			}
 			//bot.Profile.User.Status = user.StatusWaitCode
 			bot.Logger.Info("Wait code ...")
-			_, err := bot.Client.SendAuthCode(<-bot.InputChan)
+			_, err := bot.client.SendAuthCode(<-bot.InputChan)
 			if err != nil {
 				bot.Logger.Errorf("Wait Code : %s\n", err)
 				continue
@@ -521,7 +528,7 @@ func (bot *Bot) AuthBot() *tdlib.Error {
 				bot.Logger.Infof("Wait password. Hint: %s", s.PasswordHint)
 				pass = <-bot.InputChan
 			}
-			_, err := bot.Client.SendAuthPassword(pass)
+			_, err := bot.client.SendAuthPassword(pass)
 			if err != nil {
 				// TODO: Тест с возвращением ошибки, в рабочем варианте продолжал работать
 				return err.(*tdlib.Error)
@@ -548,7 +555,7 @@ func (bot *Bot) AuthBot() *tdlib.Error {
 			} else {
 				firstName = bot.Profile.User.PhoneNumber
 			}
-			ok, err := bot.Client.RegisterUser(firstName, "")
+			ok, err := bot.client.RegisterUser(firstName, "")
 			if err != nil {
 				bot.Logger.Errorf("Register user %s\n", err)
 				//os.Exit(1)
@@ -578,4 +585,32 @@ func (bot *Bot) AuthBot() *tdlib.Error {
 
 Ready:
 	return nil
+}
+
+func (bot *Bot) GetRawUpdatesChannel(capacity int) (chan *tdlib.UpdateMsg, *tdlib.Error) {
+	if !bot.IsRun() {
+		return nil, tdlib.NewError(ErrorCodeWrongData, "BOT_SYSTEM_ERROR", "Bot dying")
+	}
+	return bot.client.GetRawUpdatesChannel(capacity), nil
+}
+
+func (bot *Bot) AddEventHandler(event tdc.EventHandler) *tdlib.Error {
+	if !bot.IsRun() {
+		return tdlib.NewError(ErrorCodeWrongData, "BOT_SYSTEM_ERROR", "Bot dying")
+	}
+	bot.client.AddEventHandler(event)
+	return nil
+}
+
+func (bot *Bot) GetMarkdownText(text *tdlib.FormattedText) (*tdlib.FormattedText, *tdlib.Error) {
+	if !bot.IsRun() {
+		return nil, tdlib.NewError(ErrorCodeWrongData, "BOT_SYSTEM_ERROR", "Bot dying")
+	}
+
+	result, err := bot.client.GetMarkdownText(text)
+	if err != nil {
+		return nil, err.(*tdlib.Error)
+	}
+
+	return result, nil
 }

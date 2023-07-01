@@ -17,7 +17,7 @@ func (bot *Bot) SendPhone(phoneNumber string) {
 	/*
 		//Что делать если номер отличается от записанного в профиле???
 		bot.Logger.Infof("Send phone number %s....", phoneNumber)
-		_, err := bot.Client.SendPhoneNumber(phoneNumber)
+		_, err := bot.client.SendPhoneNumber(phoneNumber)
 		//bot.mutex.Unlock()
 		if err != nil {
 			e := err.(*tdlib.Error)
@@ -33,7 +33,7 @@ func (bot *Bot) SendPhone(phoneNumber string) {
 func (bot *Bot) SendCode(code string) {
 	bot.InputChan <- code
 	/*
-		_, err := bot.Client.SendAuthCode(code)
+		_, err := bot.client.SendAuthCode(code)
 
 		if err == nil {
 			bot.mutex.Unlock()
@@ -50,7 +50,7 @@ func (bot *Bot) SendCode(code string) {
 }
 
 func (bot *Bot) ResendCode() (e *tdlib.Error) {
-	_, err := bot.Client.ResendAuthenticationCode()
+	_, err := bot.client.ResendAuthenticationCode()
 	if err != nil {
 		e = err.(*tdlib.Error)
 	}
@@ -64,7 +64,7 @@ func (bot *Bot) ResendCode() (e *tdlib.Error) {
 func (bot *Bot) SendPass(pass string) {
 	bot.InputChan <- pass
 	/*
-		_, err := bot.Client.SendAuthPassword(pass)
+		_, err := bot.client.SendAuthPassword(pass)
 		if err != nil {
 			e := err.(*tdlib.Error)
 			return e
@@ -76,14 +76,14 @@ func (bot *Bot) SendPass(pass string) {
 }
 
 func (bot *Bot) SetPassword(pass, hint string) *tdlib.Error {
-	passState, e := bot.Client.GetPasswordState()
+	passState, e := bot.client.GetPasswordState()
 	if e != nil {
 		return e.(*tdlib.Error)
 	}
 
 	if !passState.HasPassword && pass != "" {
 		var err error
-		passState, err = bot.Client.SetPassword("", pass, hint, false, "")
+		passState, err = bot.client.SetPassword("", pass, hint, false, "")
 		if err != nil {
 			//bot.Logger.Errorf("Set pass %#v\n", err)
 			return err.(*tdlib.Error)
@@ -113,7 +113,7 @@ func (bot *Bot) SetPhoneMode(mode int) *tdlib.Error {
 	}
 
 	ps := tdlib.NewUserPrivacySettingShowPhoneNumber()
-	_, err := bot.Client.SetUserPrivacySettingRules(ps, tdlib.NewUserPrivacySettingRules([]tdlib.UserPrivacySettingRule{pr}))
+	_, err := bot.client.SetUserPrivacySettingRules(ps, tdlib.NewUserPrivacySettingRules([]tdlib.UserPrivacySettingRule{pr}))
 
 	if err != nil {
 		return tdlib.NewError(tdc.ErrorCodeSystem, err.Error(), "")
@@ -124,13 +124,13 @@ func (bot *Bot) SetPhoneMode(mode int) *tdlib.Error {
 	return nil
 }
 
-//GetMe Информация о текущем пользователе
+// GetMe Информация о текущем пользователе
 func (bot *Bot) GetMe(reload bool) (*user.User, *tdlib.Error) {
 	if !reload {
 		return bot.Profile.User, nil
 	}
 	var usr *user.User
-	me, err := bot.Client.GetMe()
+	me, err := bot.client.GetMe()
 	if err != nil {
 		return nil, err.(*tdlib.Error)
 	}
@@ -142,7 +142,7 @@ func (bot *Bot) GetMe(reload bool) (*user.User, *tdlib.Error) {
 	usr = ConvertUser(me)
 
 	//Страна бота
-	country, err := bot.Client.GetCountryCode()
+	country, err := bot.client.GetCountryCode()
 	if err != nil {
 		return nil, err.(*tdlib.Error)
 	}
@@ -163,7 +163,7 @@ func (bot *Bot) SetName(firstname, lastname string) *tdlib.Error {
 		return nil
 	}
 
-	if _, err := bot.Client.SetName(firstname, lastname); err != nil {
+	if _, err := bot.client.SetName(firstname, lastname); err != nil {
 		return err.(*tdlib.Error)
 	}
 
@@ -198,11 +198,11 @@ func (bot *Bot) InitProfilePhoto(photo string) *tdlib.Error {
 	return nil
 }
 
-//SetProfilePhoto установить фото профиля
+// SetProfilePhoto установить фото профиля
 func (bot *Bot) ProfileSetPhoto(path string) *tdlib.Error {
 	inFile := tdlib.NewInputFileLocal(path)
 	chatPhoto := tdlib.NewInputChatPhotoStatic(inFile)
-	_, err := bot.Client.SetProfilePhoto(chatPhoto)
+	_, err := bot.client.SetProfilePhoto(chatPhoto)
 	if err != nil {
 		return err.(*tdlib.Error)
 	}
@@ -211,16 +211,16 @@ func (bot *Bot) ProfileSetPhoto(path string) *tdlib.Error {
 
 }
 
-//RemoveProfilePhoto удалить фото профиля
+// RemoveProfilePhoto удалить фото профиля
 func (bot *Bot) ProfileRemovePhoto() *tdlib.Error {
-	p, err := bot.Client.GetUserProfilePhotos(bot.Profile.User.ID, 0, 100)
+	p, err := bot.client.GetUserProfilePhotos(bot.Profile.User.ID, 0, 100)
 	if err != nil {
 		bot.Logger.Errorf("REMOVE PROFILE %#v", err)
 		return tdlib.NewError(tdc.ErrorCodeSystem, err.Error(), "")
 		//return err.(*tdlib.Error)
 	} else {
 		for _, photo := range p.Photos {
-			_, err = bot.Client.DeleteProfilePhoto(&photo.ID)
+			_, err = bot.client.DeleteProfilePhoto(&photo.ID)
 			if err != nil {
 				return err.(*tdlib.Error)
 			}

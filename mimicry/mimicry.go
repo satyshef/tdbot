@@ -3,7 +3,6 @@ package mimicry
 import (
 	"fmt"
 
-	"github.com/satyshef/go-tdlib/tdlib"
 	"github.com/satyshef/tdbot"
 	"github.com/satyshef/tdbot/user"
 
@@ -32,7 +31,7 @@ func (h *Human) GetFriendsList() ([]int64, error) {
 		return nil, fmt.Errorf("Mimicry not set")
 	}
 
-	friends, err := h.Bot.Client.SearchContacts(h.Bot.Profile.Config.Mimicry.FriendName, int32(h.Bot.Profile.Config.Mimicry.FriendCount))
+	friends, err := h.Bot.SearchContacts(h.Bot.Profile.Config.Mimicry.FriendName, int32(h.Bot.Profile.Config.Mimicry.FriendCount))
 	if err != nil {
 		return nil, err
 	}
@@ -67,49 +66,57 @@ func (h *Human) GetRandomFriend() (int64, error) {
 	return ids[i], nil
 }
 
-//Подружиться
+// Подружиться
 func (h *Human) MakeFriends(count int) ([]int64, error) {
-	var memberLimit int32 = 200
 
-	//Друзей берем из группы
-	//chat, err := h.GetFriendChat()
-	chat, err := h.Bot.GetChat(h.Bot.Profile.Config.Mimicry.FriendRoom, true)
-	if err != nil {
-		return nil, err
-	}
+	return nil, fmt.Errorf("%s", "Methot STUB")
+	/*
+		var memberLimit int32 = 200
 
-	//Пишем приветственное сообщение
-	h.Bot.SendMessageByCID(chat.ID, fmt.Sprintf("Hi i'm %s", h.Bot.Profile.User.FirstName))
+		   //Друзей берем из группы
+		   //chat, err := h.GetFriendChat()
+		   chat, err := h.Bot.GetChat(h.Bot.Profile.Config.Mimicry.FriendRoom, true)
 
-	var members *tdlib.ChatMembers
-	if chat.Type.GetChatTypeEnum() == tdlib.ChatTypeSupergroupType {
-		c := chat.Type.(*tdlib.ChatTypeSupergroup)
-		members, _ = h.Bot.Client.GetSupergroupMembers(c.SupergroupID, nil, 0, memberLimit)
-	} else {
-		members, _ = h.Bot.Client.SearchChatMembers(chat.ID, "", memberLimit, nil)
-	}
-	result := []int64{}
+		   	if err != nil {
+		   		return nil, err
+		   	}
 
-	//добавляем ботов-друзей в контакты и записываем их id
-	for i := 0; i < count; i++ {
-		//берем случайного бота
-		m := RandInt(0, int(members.TotalCount)-1)
-		uid := members.Members[m].MemberID.(*tdlib.MessageSenderUser).UserID
-		//игнорируем себя
-		if h.Bot.Profile.User.ID == uid {
-			continue
-		}
-		//игнорируем создателя и администратора
-		if members.Members[m].Status.GetChatMemberStatusEnum() == tdlib.ChatMemberStatusCreatorType || members.Members[m].Status.GetChatMemberStatusEnum() == tdlib.ChatMemberStatusAdministratorType || members.Members[m].Status.GetChatMemberStatusEnum() == tdlib.ChatMemberStatusBannedType {
-			continue
-		}
-		//fmt.Printf("MEMBER : %#v\n\n", members.Members[m])
-		h.Bot.AddContact(uid, h.Bot.Profile.Config.Mimicry.FriendName, fmt.Sprintf("%d", uid))
-		result = append(result, uid)
-	}
+		   //Пишем приветственное сообщение
+		   h.Bot.SendMessageByCID(chat.ID, fmt.Sprintf("Hi i'm %s", h.Bot.Profile.User.FirstName))
 
-	return result, nil
+		   var members *tdlib.ChatMembers
 
+		   	if chat.Type.GetChatTypeEnum() == tdlib.ChatTypeSupergroupType {
+		   		c := chat.Type.(*tdlib.ChatTypeSupergroup)
+		   		members, _ = h.Bot.GetChatMembers(c.SupergroupID, nil, 0, memberLimit)
+		   	} else {
+
+		   		members, _ = h.Bot.Client.SearchChatMembers(chat.ID, "", memberLimit, nil)
+		   	}
+
+		   result := []int64{}
+
+		   //добавляем ботов-друзей в контакты и записываем их id
+
+		   	for i := 0; i < count; i++ {
+		   		//берем случайного бота
+		   		m := RandInt(0, int(members.TotalCount)-1)
+		   		uid := members.Members[m].MemberID.(*tdlib.MessageSenderUser).UserID
+		   		//игнорируем себя
+		   		if h.Bot.Profile.User.ID == uid {
+		   			continue
+		   		}
+		   		//игнорируем создателя и администратора
+		   		if members.Members[m].Status.GetChatMemberStatusEnum() == tdlib.ChatMemberStatusCreatorType || members.Members[m].Status.GetChatMemberStatusEnum() == tdlib.ChatMemberStatusAdministratorType || members.Members[m].Status.GetChatMemberStatusEnum() == tdlib.ChatMemberStatusBannedType {
+		   			continue
+		   		}
+		   		//fmt.Printf("MEMBER : %#v\n\n", members.Members[m])
+		   		h.Bot.AddContact(uid, h.Bot.Profile.Config.Mimicry.FriendName, fmt.Sprintf("%d", uid))
+		   		result = append(result, uid)
+		   	}
+
+		   return result, nil
+	*/
 }
 
 /*

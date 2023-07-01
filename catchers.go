@@ -24,7 +24,7 @@ func (bot *Bot) eventCatcher(tdEvent *tdc.SystemEvent) *tdlib.Error {
 		return tdlib.NewError(profile.ErrorCodeDirNotExists, "PROFILE_NOT_INIT", "Bot STOP! Profile not init")
 	}
 
-	if bot.Client == nil {
+	if !bot.IsClientInit() {
 		return tdlib.NewError(tdc.ErrorCodeNotInit, "CLIENT_NOT_INIT", "Client not init")
 	}
 	// Проверяем существование директории профиля. Решить что делать при отсутcтвии директории
