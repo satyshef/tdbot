@@ -219,7 +219,6 @@ func (bot *Bot) Start() *tdlib.Error {
 	if e != nil {
 		return e.(*tdlib.Error)
 	}
-
 	for state.GetAuthorizationStateEnum() != tdlib.AuthorizationStateReadyType {
 		time.Sleep(time.Second * 1)
 	}
@@ -228,7 +227,6 @@ func (bot *Bot) Start() *tdlib.Error {
 	bot.Profile.User.Status = user.StatusReady
 	ev := tdc.NewEvent(tdc.EventTypeResponse, EventNameBotReady, 0, "")
 	go bot.client.PublishEvent(ev)
-
 	<-bot.StopWork
 	return nil
 
@@ -598,7 +596,7 @@ func (bot *Bot) GetRawUpdatesChannel(capacity int) (chan *tdlib.UpdateMsg, *tdli
 }
 
 func (bot *Bot) AddEventHandler(event tdc.EventHandler) *tdlib.Error {
-	if !bot.IsRun() {
+	if !bot.IsClientInit() {
 		return tdlib.NewError(ErrorCodeWrongData, "BOT_SYSTEM_ERROR", "Bot dying")
 	}
 	bot.client.AddEventHandler(event)
