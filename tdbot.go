@@ -196,7 +196,7 @@ func (bot *Bot) Start() *tdlib.Error {
 	// Устанавливаем время удаления аккаунта
 	if bot.Profile.Config.APP.AccountTTL != 0 {
 		currentTTL, _ := bot.client.GetAccountTTL()
-		if currentTTL.Days != bot.Profile.Config.APP.AccountTTL {
+		if bot.Profile != nil && currentTTL.Days != bot.Profile.Config.APP.AccountTTL {
 			bot.Logger.Debugln("Set Account TTL : ", bot.Profile.Config.APP.AccountTTL)
 			ttl := tdlib.NewAccountTTL(bot.Profile.Config.APP.AccountTTL)
 			_, e = bot.client.SetAccountTTL(ttl)
