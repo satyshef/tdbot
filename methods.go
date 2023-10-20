@@ -101,18 +101,23 @@ func (bot *Bot) GetUnreadMessagesAll(chat *tdlib.Chat, timestamp int32) ([]tdlib
 
 		var ids []int64
 		for _, m := range msgs.Messages {
-			if (timestamp != 0 && timestamp > m.Date) || m.ID == lastMessageID {
-				bot.client.ViewMessages(chat.ID, 0, ids, true)
-				return result, nil
-			}
-
 			senderID := getSenderID(m.Sender)
 			if senderID == bot.Profile.User.ID {
 				continue
 			}
+			ids = append(ids, m.ID)
+
+			if (timestamp != 0 && timestamp > m.Date) || m.ID == lastMessageID {
+				break
+				/*
+					bot.client.ViewMessages(chat.ID, 0, ids, true)
+					bot.client.GetChat(chat.ID)
+					return result, nil
+				*/
+			}
 
 			result = append(result, m)
-			ids = append(ids, m.ID)
+
 		}
 
 		_, err = bot.client.ViewMessages(chat.ID, 0, ids, true)
@@ -120,11 +125,12 @@ func (bot *Bot) GetUnreadMessagesAll(chat *tdlib.Chat, timestamp int32) ([]tdlib
 			bot.Logger.Errorln(err)
 		}
 
-		chat, err = bot.client.GetChat(chat.ID)
-		if err != nil {
-			return nil, err.(*tdlib.Error)
-		}
-
+		/*
+			_, e := bot.GetChatFullInfo(chat.ID)
+			if e != nil {
+				return nil, e
+			}
+		*/
 		fromMessageID = msgs.Messages[countResult-1].ID
 	}
 
@@ -232,28 +238,61 @@ func (bot *Bot) GetMessageLink(chatID int64, messageID int64) (*tdlib.MessageLin
 
 // Получить последнее сообщение в чате
 // @chat - целевой чат
-func (bot *Bot) GetLastMessage(chat *tdlib.Chat) (*tdlib.Message, *tdlib.Error) {
+// @limit - максимальное количесто сообщений
+func (bot *Bot) GetLastMessages(chat *tdlib.Chat, limit int32) ([]tdlib.Message, *tdlib.Error) {
 	if !bot.IsRun() {
 		return nil, tdlib.NewError(ErrorCodeWrongData, "BOT_SYSTEM_ERROR", "Bot dying")
 	}
 	if chat == nil || chat.LastMessage == nil {
 		return nil, tdlib.NewError(ErrorCodeSystem, "BOT_SYSTEM_ERROR", "No last message ID")
 	}
-	msgs, err := bot.client.GetChatHistory(chat.ID, chat.LastMessage.ID, -1, 1, false)
+
+	msgs, err := bot.client.GetChatHistory(chat.ID, chat.LastMessage.ID, -1, limit, false)
 	if err != nil {
 		return nil, err.(*tdlib.Error)
 	}
 	if len(msgs.Messages) == 0 {
 		return nil, tdlib.NewError(ErrorCodeSystem, "BOT_SYSTEM_ERROR", "No message")
 	}
-	msg := msgs.Messages[0]
-	// Помечаем сообщения как прочитаные
-	_, err = bot.client.ViewMessages(chat.ID, 0, []int64{msg.ID}, true)
+
+	var result []tdlib.Message
+	var ids []int64
+	for _, m := range msgs.Messages {
+		senderID := getSenderID(m.Sender)
+		if senderID == bot.Profile.User.ID {
+			continue
+		}
+		//bot.GetMessage(chat.ID, m.ID)
+		//bot.client.OpenMessageContent(chat.ID, m.ID)
+
+		ids = append(ids, m.ID)
+		result = append(result, m)
+
+	}
+
+	_, err = bot.client.ViewMessages(chat.ID, 0, ids, true)
 	if err != nil {
 		bot.Logger.Errorln(err)
 	}
 
-	return &msg, nil
+	bot.GetChatFullInfo(chat.ID)
+	//bot.client.GetChat(chat.ID)
+
+	return result, nil
+
+	/*
+		msg := msgs.Messages[0]
+		// Помечаем сообщения как прочитаные
+		// TODO : не работает
+		_, err = bot.client.ViewMessages(chat.ID, 0, []int64{msg.ID}, false)
+		if err != nil {
+			bot.Logger.Errorln(err)
+		}
+
+		bot.client.GetChat(chat.ID)
+
+		return &msg, nil
+	*/
 }
 
 // SendMessageToGroup отправить сообщение в чат
@@ -459,7 +498,12 @@ func (bot *Bot) GetChatFullInfo(cid int64) (*chat.Chat, *tdlib.Error) {
 
 	case tdlib.ChatTypePrivateType:
 		//user action...
-		return nil, tdlib.NewError(ErrorCodeWrongData, "BOT_SYSTEM_ERROR", "Dont supported chat type ChatTypePrivateType")
+		user, _ := bot.GetUser(chatInfo.ID)
+		name := user.FirstName + " " + user.LastName
+		result = chat.New(chatInfo.ID, name, user.Usernames.EditableUsername, chatType)
+
+		//fmt.Printf("TYPE : %s\nINFO : %#v\n", chatType, chatInfo)
+		//return nil, tdlib.NewError(ErrorCodeWrongData, "BOT_SYSTEM_ERROR", "Dont supported chat type ChatTypePrivateType")
 
 	default:
 		bot.Logger.Infof("UNKNOWN CHAT TYPE:\n\n%#v\n\n", chatInfo)
@@ -1424,7 +1468,8 @@ func (bot *Bot) GetChat(chatname string, join bool) (*tdlib.Chat, *tdlib.Error) 
 				return nil, err.(*tdlib.Error)
 			}
 		}
-		if join {
+
+		if join && chat.Type.GetChatTypeEnum() != tdlib.ChatTypePrivateType {
 			_, err := bot.client.JoinChat(chat.ID)
 			if err != nil {
 				bot.Logger.Errorf("Join to %s error: %s\n", chat.ID, err)
