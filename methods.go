@@ -86,9 +86,10 @@ func (bot *Bot) GetUnreadMessagesAll(chat *tdlib.Chat, timestamp int32) ([]tdlib
 	var result []tdlib.Message
 	var fromMessageID int64
 	lastMessageID := chat.LastReadInboxMessageID
-
-	for chat.UnreadCount != 0 {
-		msgs, err := bot.client.GetChatHistory(chat.ID, fromMessageID, 0, 99, false)
+	unreadCount := chat.UnreadCount
+	for unreadCount > 0 {
+		fmt.Printf("ID %d\n", fromMessageID)
+		msgs, err := bot.client.GetChatHistory(chat.ID, fromMessageID, 0, unreadCount, false)
 		if err != nil {
 			bot.Logger.Errorln("Get chat history: ", err)
 			break
@@ -117,7 +118,7 @@ func (bot *Bot) GetUnreadMessagesAll(chat *tdlib.Chat, timestamp int32) ([]tdlib
 			}
 
 			result = append(result, m)
-
+			unreadCount -= 1
 		}
 
 		_, err = bot.client.ViewMessages(chat.ID, 0, ids, true)
@@ -500,7 +501,12 @@ func (bot *Bot) GetChatFullInfo(cid int64) (*chat.Chat, *tdlib.Error) {
 		//user action...
 		user, _ := bot.GetUser(chatInfo.ID)
 		name := user.FirstName + " " + user.LastName
-		result = chat.New(chatInfo.ID, name, user.Usernames.EditableUsername, chatType)
+		username := strings.ToLower(user.Usernames.EditableUsername)
+		// Проверка, является ли пользователь ботом
+		if strings.HasSuffix(username, "bot") {
+			chatType = chat.TypeBot
+		}
+		result = chat.New(chatInfo.ID, name, username, chatType)
 
 		//fmt.Printf("TYPE : %s\nINFO : %#v\n", chatType, chatInfo)
 		//return nil, tdlib.NewError(ErrorCodeWrongData, "BOT_SYSTEM_ERROR", "Dont supported chat type ChatTypePrivateType")
@@ -1415,7 +1421,8 @@ func (bot *Bot) GetChat(chatname string, join bool) (*tdlib.Chat, *tdlib.Error) 
 	//var imInGroup bool
 	var err error
 	//Если пригласительная ссылка
-	if strings.Contains(chatname, "t.me/joinchat/") || strings.Contains(chatname, "t.me/+") {
+
+	if !IsPublicLink(chatname) {
 		//bot.Logger.Debugln("Parse private chat ", chatname)
 		var chatInfo *tdlib.ChatInviteLinkInfo
 		chatInfo, err = bot.client.CheckChatInviteLink(chatname)
@@ -1437,9 +1444,7 @@ func (bot *Bot) GetChat(chatname string, join bool) (*tdlib.Chat, *tdlib.Error) 
 		}
 	} else {
 
-		chatname = strings.ReplaceAll(chatname, "https://t.me/", "")
-		chatname = strings.ReplaceAll(chatname, "t.me/", "")
-		chatname = strings.ReplaceAll(chatname, "@", "")
+		chatname = ExtrctChatName(chatname)
 		//Если chatID == int64 тогда ищем чат по id иначе по имени
 		cid, err := strconv.ParseInt(chatname, 10, 64)
 		if err != nil {
@@ -1468,7 +1473,6 @@ func (bot *Bot) GetChat(chatname string, join bool) (*tdlib.Chat, *tdlib.Error) 
 				return nil, err.(*tdlib.Error)
 			}
 		}
-
 		if join && chat.Type.GetChatTypeEnum() != tdlib.ChatTypePrivateType {
 			_, err := bot.client.JoinChat(chat.ID)
 			if err != nil {
@@ -1477,7 +1481,7 @@ func (bot *Bot) GetChat(chatname string, join bool) (*tdlib.Chat, *tdlib.Error) 
 			}
 		}
 	}
-	time.Sleep(time.Millisecond * 500)
+	//time.Sleep(time.Millisecond * 500)
 	return chat, nil
 
 }
@@ -1651,10 +1655,10 @@ func (bot *Bot) LeaveChatList(chats []*tdlib.Chat, limit int32) *tdlib.Error {
 		}
 		//fmt.Printf("Leave Chat error %#v\n", c.Permissions.CanChangeInfo)
 		if !c.Permissions.CanChangeInfo {
-
 			switch c.Type.GetChatTypeEnum() {
 			case tdlib.ChatTypePrivateType:
-				continue
+				_, e = bot.client.DeleteChat(c.ID)
+				//continue
 			case tdlib.ChatTypeBasicGroupType:
 				_, e = bot.client.DeleteChat(c.ID)
 			case tdlib.ChatTypeSupergroupType:
