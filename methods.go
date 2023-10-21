@@ -88,7 +88,6 @@ func (bot *Bot) GetUnreadMessagesAll(chat *tdlib.Chat, timestamp int32) ([]tdlib
 	lastMessageID := chat.LastReadInboxMessageID
 	unreadCount := chat.UnreadCount
 	for unreadCount > 0 {
-		fmt.Printf("ID %d\n", fromMessageID)
 		msgs, err := bot.client.GetChatHistory(chat.ID, fromMessageID, 0, unreadCount, false)
 		if err != nil {
 			bot.Logger.Errorln("Get chat history: ", err)
